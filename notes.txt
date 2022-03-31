@@ -1,0 +1,14 @@
+# TIL
+vscode removes python path. Must be set in a .env file. 
+
+# jupyter
+%load_ext autoreload
+%autoreload 2
+view(atoms, viewer='x3d')
+
+
+# bash
+find . -name "foo*"
+nvcc  --version
+cat /usr/local/cuda/include/cudnn.h | grep CUDNN_MAJOR -A 2
+cat /usr/include/cudnn.h | grep CUDNN_MAJOR -A 2
