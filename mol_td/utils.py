@@ -1,5 +1,17 @@
 import os
 import pickle as pk
+import yaml
+
+
+DEFAULT_CONFIG_PATH = './configs/default_config.yaml'
+
+
+def load_config(path=None):
+    if path is None: path = DEFAULT_CONFIG_PATH
+    with open(oj(path)) as file:
+        cfg = yaml.safe_load(file)
+    return cfg
+
 
 def oj(*paths):
     return os.path.join(*paths)

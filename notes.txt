@@ -1,14 +1,34 @@
 # TIL
 vscode removes python path. Must be set in a .env file. 
 
+# dtu compute cluster
+vscode terminal doesn't have correct paths for CUDA and CuDNN, instead use external terminal
+
 # jupyter
 %load_ext autoreload
 %autoreload 2
 view(atoms, viewer='x3d')
 
+# wandb
+key d805e2401b889042f9e909e3de243a8698d5c422
 
 # bash
 find . -name "foo*"
 nvcc  --version
 cat /usr/local/cuda/include/cudnn.h | grep CUDNN_MAJOR -A 2
 cat /usr/include/cudnn.h | grep CUDNN_MAJOR -A 2
+
+
+
+# jax code
+key = random.PRNGKey(0)
+key, *subkeys = random.split(key, 4)
+.block_until_ready()
+t = [1, {"k1": 2, "k2": (3, 4)}, 5]
+tree_util.tree_map(lambda x: x*x, t)  # applies function to all leaves
+tree_util.tree_multimap(lambda x,y: x+y, t, tree_util.tree_map(lambda x: x*x, t))  # output of treemap provides second input to 
+
+
+dataclass initialisation pattern https://flax.readthedocs.io/en/latest/notebooks/flax_basics.html (Module)
+
+setup method initialises layers. It is possible to skip this for inline initialisation and execution by creating a nn.compact method. 

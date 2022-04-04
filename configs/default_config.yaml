@@ -1,0 +1,19 @@
+# WANDB
+WANDB:
+  user: xmax1
+
+# MODEL
+
+
+# TRAINING
+TRAIN:
+  n_epochs: 1000
+  lr: 0.001
+
+# PATHS
+PATHS:
+  root: /home/amawi/projects/mol-td
+  data: ./data
+  results: ./results/test
+  default_config: ./configs/default_config.yaml
+  uracil_xyz: ./data/uracil.xyz
