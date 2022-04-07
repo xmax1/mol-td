@@ -1,1 +1,0 @@
-{"loss": 428.4559020996094, "kl_div_tmp": 0.02230357751250267, "nll": 428.43359375, "predictions_mse": 3.262523651123047, "_timestamp": 1649238928, "_runtime": 22, "_step": 1463, "_wandb": {"runtime": 22}}
