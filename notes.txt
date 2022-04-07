@@ -1,3 +1,15 @@
+# questions
+why leaky relu on cnn and relu on dense? 
+does changing step input of wandb change the global step? 
+why sample from prior to create the t-1 latent dist to get the current data for GRU cell? 
+how to make predictions with GRUcell? 
+why is the cwvae posterior dependent on det_out from the GRUCell (as well as the data)? 
+PeepHoleLSTM, Echo State Network, NAS Cells (alternative models in the latent space)
+How to put kwargs into tree_map? 
+
+# ase
+https://wiki.fysik.dtu.dk/ase/
+
 # TIL
 vscode removes python path. Must be set in a .env file. 
 
@@ -11,6 +23,10 @@ view(atoms, viewer='x3d')
 
 # wandb
 key d805e2401b889042f9e909e3de243a8698d5c422
+init docs https://docs.wandb.ai/ref/python/init
+
+# vscode
+python terminal can be updated in the settings.json file 
 
 # bash
 find . -name "foo*"
@@ -18,7 +34,8 @@ nvcc  --version
 cat /usr/local/cuda/include/cudnn.h | grep CUDNN_MAJOR -A 2
 cat /usr/include/cudnn.h | grep CUDNN_MAJOR -A 2
 
-
+# TDVAE Structure
+We use the scan function to provide a way to apply the function across all the axis and return a stacked version
 
 # jax code
 key = random.PRNGKey(0)
@@ -27,7 +44,6 @@ key, *subkeys = random.split(key, 4)
 t = [1, {"k1": 2, "k2": (3, 4)}, 5]
 tree_util.tree_map(lambda x: x*x, t)  # applies function to all leaves
 tree_util.tree_multimap(lambda x,y: x+y, t, tree_util.tree_map(lambda x: x*x, t))  # output of treemap provides second input to 
-
 
 dataclass initialisation pattern https://flax.readthedocs.io/en/latest/notebooks/flax_basics.html (Module)
 

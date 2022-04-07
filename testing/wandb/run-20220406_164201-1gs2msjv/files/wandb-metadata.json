@@ -1,0 +1,34 @@
+{
+    "os": "Linux-5.4.0-104-generic-x86_64-with-glibc2.27",
+    "python": "3.10.3",
+    "heartbeatAt": "2022-04-06T14:42:05.345515",
+    "startedAt": "2022-04-06T14:42:01.708892",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 2080 Ti",
+    "gpu_count": 8,
+    "cpu_count": 32,
+    "cuda": null,
+    "args": [
+        "--ip=127.0.0.1",
+        "--stdin=9018",
+        "--control=9016",
+        "--hb=9015",
+        "--Session.signature_scheme=\"hmac-sha256\"",
+        "--Session.key=b\"58181e21-f71c-41e3-80e5-80c8b492dc79\"",
+        "--shell=9017",
+        "--transport=\"tcp\"",
+        "--iopub=9019",
+        "--f=/tmp/tmp-28134u0ITaSN0azkx.json"
+    ],
+    "state": "running",
+    "program": "<python with no main file>",
+    "git": {
+        "remote": "git@github.com:xmax1/mol-td.git",
+        "commit": "fee73752ad202277fbc6d48fcb5637ed199385e8"
+    },
+    "email": null,
+    "root": "/home/amawi/projects/mol-td",
+    "host": "tethys",
+    "username": "amawi",
+    "executable": "/home/amawi/.conda/envs/td/bin/python"
+}

@@ -1,6 +1,4 @@
-from .utils import load_config
 import jax
-from typing import Any, Callable, Sequence, Optional
 from jax import lax, random as rnd, numpy as jnp
 import flax
 from flax.core import freeze, unfreeze

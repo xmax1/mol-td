@@ -1,14 +1,30 @@
+seed: 1
+
 # WANDB
 WANDB:
+  track: False
   user: xmax1
+  project: test
+  id: null  # null for nada for none
+  WANDB_API_KEY: 1
 
 # MODEL
-
+MODEL:
+  model:             'SimpleTDVAE'
+  n_enc_layers:      2
+  n_dec_layers:      2
+  n_transfer_layers: 2
+  n_embed:              20
+  prediction_std:        1.
+  latent_dist_min_std:   0.01  # 0.0001 cwvae
 
 # TRAINING
 TRAIN:
-  n_epochs: 1000
+  n_epochs: 1
+  batch_size: 32
   lr: 0.001
+  n_timesteps: 2
+  n_timesteps_eval: 2
 
 # PATHS
 PATHS:

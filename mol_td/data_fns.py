@@ -1,43 +1,21 @@
-from .utils import load_config
 import jax
-from typing import Any, Callable, Sequence, Optional
-from jax import lax, random as rnd, numpy as jnp
-import flax
-from flax.core import freeze, unfreeze
-from flax import linen as nn
-import optax
-import wandb
-import numpy as np
-
-import torch
-from torch.utils.data import DataLoader, TensorDataset
+from jax import random as rnd, numpy as jnp
+from functools import reduce
+import jax.numpy as jnp 
+import jax 
+from .config import Config
 
 
-# class DataLoader():
-#     def __init__():
-
-#     def 
-
+def normalise(data, new_min=-1, new_max=1):
+    data = ((data - jnp.min(data)) / (jnp.max(data) - jnp.min(data))) * (new_max - new_min) + new_min
+    return data
 
 
-
-def load_data(path):
-    raw_data = np.load(path)
-    # print(tuple(raw_data.keys()))
-    forces, coords = raw_data['F'], raw_data['R']
-    n_data, n_atoms, _ = forces.shape
-    atoms = raw_data['z'][None, :, None].repeat(n_data, axis=0)
-    print(forces.shape, coords.shape, atoms.shape)
-    data = np.concatenate([forces, coords, atoms], axis=-1)
-    data = np.reshape(data, (n_data, n_atoms * 7))
-    return data, raw_data
-
-
-def get_split(n_data, data_seed=1, split=(0.7, 0.15, 0.15)):
+def get_split(n_data, seed=1, split=(0.7, 0.15, 0.15)):
     
-    key = rnd.PRNGKey(data_seed)
+    key = rnd.PRNGKey(seed)
     split_idxs = jnp.arange(n_data)
-    split_idxs = rnd.shuffle(key, split_idxs)
+    split_idxs = rnd.permutation(key, split_idxs, independent=True)
 
     n_train, n_val, n_test = (
         int(n_data * split[0]),
@@ -60,72 +38,111 @@ def cut_remainder(idxs, batch_size):
 
 
 def create_loader(data, target, idxs, batch_size):
-    n_batches, remainder = divmod(len(data), batch_size)
-    return zip(data[idxs].reshape((n_batches, data.shape[1:])), target[idxs].reshape((n_batches, target.shape[1:])))
+    n_batches, remainder = divmod(len(idxs), batch_size)
+    return zip(data[idxs[:(n_batches*batch_size)]].reshape((n_batches, batch_size, data.shape[-1])), 
+                target[idxs[:(n_batches*batch_size)]].reshape((n_batches, batch_size, target.shape[-1])))
+
+
+def prep_dataloaders(cfg, data, split=(0.7, 0.15, 0.15)):
+    n_data = len(data)
+    # train_idxs, val_idxs, test_idxs = get_split(len(data), seed=cfg.seed)
     
+    # train_data, val_data, test_data = Dataset(data[train_idxs]), Dataset(data[val_idxs]), Dataset(data[test_idxs])
 
+    n_train, n_val, n_test = (
+        int(n_data * split[0]),
+        int(n_data * split[1]),
+        int(n_data * split[2])
+    )
 
-# def prep_data(data, target,  batch_size=32, data_seed=1):
-#     bs = batch_size
+    train_data, val_data, test_data = data[:n_train], data[n_train:n_train+n_val], data[-n_test:]
 
-#     train_idxs, val_idxs, test_idxs = get_split(len(data), data_seed=data_seed)
-#     # train_idxs, val_idxs, test_idxs = map(cut_remainder, idxs, [batch_size for _ in len(idxs)])
-
-#     n_batches = len(train_idxs)//batch_size
-#     train_loader = [(data[train_idxs][i*bs:(i+1)*bs], target[train_idxs][i*bs:(i+1)*bs]) for i in range(n_batches)]
-
-#     n_batches = len(val_idxs)//batch_size
-#     val_loader = [(data[train_idxs][i*bs:(i+1)*bs], target[train_idxs][i*bs:(i+1)*bs]) for i in range(n_batches)]
-    
-#     n_batches = len(test_idxs)//batch_size
-#     test_loader = [(data[train_idxs][i*bs:(i+1)*bs], target[train_idxs][i*bs:(i+1)*bs]) for i in range(n_batches)]
-
-#     return train_loader, val_loader, test_loader
-
-
-def prep_data(data, target,  batch_size=32, data_seed=1):
-
-    train_idxs, val_idxs, test_idxs = get_split(len(data), data_seed=data_seed)
-
-    train_loader = create_loader(data, target, train_idxs, batch_size)
-    val_loader = create_loader(data, target, val_idxs, batch_size)
-    test_loader = create_loader(data, target, test_idxs, batch_size)
+    train_loader = DataLoader(cfg, train_data)
+    val_loader = DataLoader(cfg, val_data)
+    test_loader = DataLoader(cfg, test_data)
 
     return train_loader, val_loader, test_loader
 
 
-
-
-
-class DataLoader():
-    def __init__(self, 
-                 data, 
-                 target, 
-                 batch_size):
-        
-        self.batch_size = batch_size
-        self.data = data
-        self.target = target
-
-    def __next__():
-        i += 1
-        return self.data[i*self.batch_size:(i+1)*self.batch_sizes]
-
-
-
-
-
-def prep_data_torch(data, target, batch_size=32, data_seed=1):
+class DataLoader:
     
-    idxs = get_split(len(data), data_seed=data_seed)
-    train_idxs, val_idxs, test_idxs = map(np.array, idxs)
+    def __init__(self, 
+        cfg: Config,
+        data: jnp.array,
+        path: str=None,
+        shuffle: bool=True
+    ):
+        """Naive dataloader implementation with support for 
+        - shuffeling with explicit key, 
+        - dropping the last batch if it is incomplete,
+        - parallelism using `jax.vmap`.
+        Args:
+            data (object): Class that implements `__len__` and `__call__(idx)`
+            batch_size (Union[int, Sequence[int]]): Batch size 
+            shuffle (bool, optional): If `False` calling `dataloader.shuffle(key)` is a null-operation. Defaults to True.
+            drop_last_batch (bool, optional): If `True` last batch is dropped if its batch size would be incomplete. Defaults to True.
+        Raises:
+            Exception: Requested batch size exceeds data-length
 
-    train_dataset = TensorDataset(data[train_idxs], target[train_idxs])
-    # val_dataset = TensorDataset(*[jnp.array(input) for input in [data[val_idxs], target[val_idxs]]], )
-    # test_dataset = TensorDataset(*[jnp.array(input) for input in [data[test_idxs], target[test_idxs]]], )
+        Thieved from https://github.com/SimiPixel/jax_dataloader
+        """
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    # val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    # test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+        self.batch_size = cfg.batch_size
+        self.seed = cfg.seed
+        self.n_timesteps = cfg.n_timesteps
+        self.n_timesteps_eval = cfg.n_timesteps_eval
 
-    return train_loader
+        ### PREPARATION OF THE DATA AND TARGETS ###
+        n_data = len(data)
+
+        if self.n_timesteps:
+            n_data, remainder = divmod(n_data, self.n_timesteps)
+            data = data[:-remainder] if remainder > 0 else data
+            data = data.reshape((n_data, self.n_timesteps, *data.shape[1:]))
+            
+        self.data = data
+        self.target = data[..., :-cfg.n_atoms]
+        
+        # Shuffle stuff
+        self._slices = [slice(i,i+self.batch_size) for i in range(0,n_data,self.batch_size)]
+        self._shuffle = shuffle
+        self._order = jnp.arange(0, n_data)
+        self.key = rnd.PRNGKey(self.seed)
+        self.key, subkey = jax.random.split(self.key)
+        self._order = jax.random.permutation(subkey, self._order)
+
+        self._exhausted_batches = 0 
+    
+    
+    def shuffle(self, key=None, returns_new_key=False, reset=True):
+
+        if reset:
+            self._exhausted_batches = 0
+            
+        if key is None:
+            self.key, subkey = jax.random.split(self.key)
+
+        if self._shuffle:
+            self._order = jax.random.permutation(subkey, self._order)
+
+        if returns_new_key:
+            return self.key
+
+    def __len__(self):
+        return len(self._slices)
+
+    def __iter__(self):
+        self._exhausted_batches = 0
+        return self 
+
+    def __next__(self):
+        
+        i = self._exhausted_batches
+
+        if i < len(self):
+            batch = self.data[(self._order[self._slices[i]],)]
+            target = self.target[(self._order[self._slices[i]],)]
+            self._exhausted_batches += 1
+            return batch, target
+        else:
+            raise StopIteration
