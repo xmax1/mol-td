@@ -1,0 +1,32 @@
+{
+    "os": "Linux-5.4.0-104-generic-x86_64-with-glibc2.27",
+    "python": "3.10.3",
+    "heartbeatAt": "2022-04-09T09:35:33.678367",
+    "startedAt": "2022-04-09T09:35:31.904977",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 2080 Ti",
+    "gpu_count": 8,
+    "cpu_count": 32,
+    "cuda": null,
+    "args": [
+        "--wb",
+        "-m",
+        "SimpleVAE",
+        "-p",
+        "test",
+        "-i",
+        "baseline1_scalekl2"
+    ],
+    "state": "running",
+    "program": "/home/amawi/projects/mol-td/train.py",
+    "codePath": "train.py",
+    "git": {
+        "remote": "git@github.com:xmax1/mol-td.git",
+        "commit": "e40ac2e6bceb352b49a702a0c02f9ebed460c076"
+    },
+    "email": null,
+    "root": "/home/amawi/projects/mol-td",
+    "host": "tethys",
+    "username": "amawi",
+    "executable": "/home/amawi/.conda/envs/td/bin/python"
+}

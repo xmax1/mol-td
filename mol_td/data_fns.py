@@ -6,7 +6,7 @@ import jax
 from .config import Config
 
 
-def normalise(data, new_min=-1, new_max=1):
+def transform(data, new_min=-1, new_max=1):
     data = ((data - jnp.min(data)) / (jnp.max(data) - jnp.min(data))) * (new_max - new_min) + new_min
     return data
 
@@ -44,10 +44,18 @@ def create_loader(data, target, idxs, batch_size):
 
 
 def prep_dataloaders(cfg, data, split=(0.7, 0.15, 0.15)):
-    n_data = len(data)
-    # train_idxs, val_idxs, test_idxs = get_split(len(data), seed=cfg.seed)
     
-    # train_data, val_data, test_data = Dataset(data[train_idxs]), Dataset(data[val_idxs]), Dataset(data[test_idxs])
+    # split into timesteps
+    if cfg.n_timesteps:
+        n_data, remainder = divmod(data.shape[0], cfg.n_timesteps)
+        data = data[:-remainder] if remainder > 0 else data
+        data = data.reshape((n_data, cfg.n_timesteps, *data.shape[1:]))
+    
+    data = data[:-divmod(data.shape[0], cfg.batch_size)[1]] # remove not full batch
+    key = rnd.PRNGKey(cfg.seed)
+    data = rnd.permutation(key, data, axis=0)
+
+    n_data = len(data)
 
     n_train, n_val, n_test = (
         int(n_data * split[0]),
@@ -55,7 +63,7 @@ def prep_dataloaders(cfg, data, split=(0.7, 0.15, 0.15)):
         int(n_data * split[2])
     )
 
-    train_data, val_data, test_data = data[:n_train], data[n_train:n_train+n_val], data[-n_test:]
+    train_data, val_data, test_data = data[:n_train], data[n_train:(n_train+n_val)], data[-n_test:]
 
     train_loader = DataLoader(cfg, train_data)
     val_loader = DataLoader(cfg, val_data)
@@ -69,7 +77,6 @@ class DataLoader:
     def __init__(self, 
         cfg: Config,
         data: jnp.array,
-        path: str=None,
         shuffle: bool=True
     ):
         """Naive dataloader implementation with support for 
@@ -91,39 +98,29 @@ class DataLoader:
         self.seed = cfg.seed
         self.n_timesteps = cfg.n_timesteps
         self.n_timesteps_eval = cfg.n_timesteps_eval
-
-        ### PREPARATION OF THE DATA AND TARGETS ###
-        n_data = len(data)
-
-        if self.n_timesteps:
-            n_data, remainder = divmod(n_data, self.n_timesteps)
-            data = data[:-remainder] if remainder > 0 else data
-            data = data.reshape((n_data, self.n_timesteps, *data.shape[1:]))
-            
+        
         self.data = data
         self.target = data[..., :-cfg.n_atoms]
         
         # Shuffle stuff
-        self._slices = [slice(i,i+self.batch_size) for i in range(0,n_data,self.batch_size)]
+        self._slices = [slice(i,i+self.batch_size) for i in range(0, data.shape[0], self.batch_size)]  # removes the remainder
         self._shuffle = shuffle
-        self._order = jnp.arange(0, n_data)
+        self._order = jnp.arange(0, data.shape[0])
         self.key = rnd.PRNGKey(self.seed)
-        self.key, subkey = jax.random.split(self.key)
-        self._order = jax.random.permutation(subkey, self._order)
+        self.key, subkey = rnd.split(self.key)
+        self._order = rnd.permutation(subkey, self._order)
 
         self._exhausted_batches = 0 
     
     
     def shuffle(self, key=None, returns_new_key=False, reset=True):
+        
+        self.key, subkey = rnd.split(self.key)
+        self._order = rnd.permutation(subkey, self._order)
 
         if reset:
+            print('Resetting dataloader... ')
             self._exhausted_batches = 0
-            
-        if key is None:
-            self.key, subkey = jax.random.split(self.key)
-
-        if self._shuffle:
-            self._order = jax.random.permutation(subkey, self._order)
 
         if returns_new_key:
             return self.key

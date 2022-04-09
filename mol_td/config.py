@@ -10,30 +10,32 @@ class Config:
     seed: int = 1
 
     # WANDB
-    use_wandb:      bool = False
-    wandb_status:   str = 'offline'
-    user:           str = 'xmax1'
-    project:        str ='test'
-    id:             str = None  # null for nada for none
-    WANDB_API_KEY:  int = 1
+    wb:             bool = False
+    wandb_status:   str  = 'offline'
+    user:           str  = 'xmax1'
+    project:        str  = 'test'
+    id:             str  = None  # null for nada for none
+    group:          str  = 'no_group'
+    WANDB_API_KEY:  int  = 1
 
     # MODEL
-    model:                  str = 'SimpleTDVAE'
-    n_enc_layers:           int = 1
-    n_dec_layers:           int = 1
-    n_transfer_layers:      int = 1
-    n_embed:                list = 20
+    model:                  str   = 'SimpleTDVAE'
+    n_enc_layers:           int   = 2
+    n_dec_layers:           int   = 2
+    n_transfer_layers:      int   = 2
+    n_embed:                list  = 20
     prediction_std:         float = 1.
-    latent_dist_min_std:    float = 0.01  # 0.0001 cwvae
+    latent_dist_min_std:    float = 0.001  # 0.0001 cwvae
+    dropout:                float = 0.5
 
     # DATA
     n_target:           int = None
     n_input:            int = None
 
     # TRAINING
-    n_epochs:           int = 2
-    batch_size:         int = 16
-    lr:                 float = 0.0001
+    n_epochs:           int = 50
+    batch_size:         int = 128
+    lr:                 float = 0.001
     n_timesteps:        int = 2
     n_timesteps_eval:   int = 2
 
@@ -49,10 +51,13 @@ class Config:
         if self.id is None:
             self.id = datetime.now().strftime('%y%m%d%H%M%S')
 
-        if self.use_wandb:
+        if self.wb:
             self.wandb_status = 'online'
         else:
             self.wandb_status = 'disabled'
+
+        if self.model == 'SimpleVAE':
+            self.n_timesteps = 0
 
     # @property
     # def n_data(self):
@@ -65,10 +70,30 @@ class Config:
 
     def load_data(self, path):
         raw_data = np.load(path)
-        positions = normalise(raw_data['R'])
-        forces = normalise(raw_data['F'])
+        positions = raw_data['R']
+        forces = raw_data['F']
+        self.atoms = raw_data['z']
+        self.data_r_min = jnp.min(positions)
+        self.data_r_max = jnp.max(positions)
+        self.data_f_min = jnp.min(forces)
+        self.data_f_max = jnp.max(forces)
+        self.data_atoms_min = jnp.min(self.atoms)
+        self.data_atoms_max = jnp.max(self.atoms)
+
         self.n_data, self.n_atoms, _ = positions.shape
-        atoms = normalise(raw_data['z'])[None, :].repeat(self.n_data, axis=0)
+        
+        pos_mean = np.mean(positions.reshape((-1, 3)), axis=0)
+        pos_std = np.std(positions.reshape((-1, 3)), axis=0)
+        a_min = pos_mean-2*pos_std
+        a_max = pos_mean+2*pos_std
+        self.data_lims = tuple((vmin, vmax) for vmin, vmax in zip(a_min, a_max))
+        print(f'Position mean: {pos_mean} \n Position std: {pos_std} \n Lims: {self.data_lims} \
+                \n F-Lims: {float(self.data_f_min):.4f} {float(self.data_f_max):.4f} \
+                \n A-Lims: {int(self.data_atoms_min)} {int(self.data_atoms_max)}    ')
+
+        positions = self.transform(positions, self.data_r_min, self.data_r_max)
+        forces = self.transform(raw_data['F'], self.data_f_min, self.data_f_max)
+        atoms = self.transform(self.atoms, self.data_atoms_min, self.data_atoms_max)[None, :].repeat(self.n_data, axis=0)
 
         self.n_features = self.n_atoms * (3 + 3 + 1)
         self.n_target_features = self.n_features - self.n_atoms
@@ -80,20 +105,13 @@ class Config:
         
     def initialise_model_hype(self):
         self.enc_hidden = tuple(jnp.linspace(self.n_features, self.n_embed, num=self.n_enc_layers+1).astype(int)[1:])
-        self.dec_hidden = tuple(jnp.linspace(self.n_embed, self.n_target_features, num=self.n_dec_layers+1).astype(int))
-
-        # return dict(positions=raw_data['R'],
-        #             forces=raw_data['F'],
-        #             atoms=raw_data['z'][None, :].repeat(self.n_data, axis=0))
-
-    
+        self.dec_hidden = tuple(jnp.linspace(self.n_embed, self.n_target_features, num=self.n_dec_layers+1).astype(int)[1:])
+        # print('Encoder:', self.enc_hidden, 'Decoder:', self.dec_hidden)
     
     @property
     def total_filters(self):
         return self.filters * self.channels_mult
 
-def normalise(data, new_min=-1, new_max=1):
-        data_min = jnp.min(data)
-        data_max = jnp.max(data)
-        data = ((data - data_min) / (data_max - data_min)) * (new_max - new_min) + new_min
+    def transform(self, data, old_min, old_max, new_min=-1, new_max=1):
+        data = ((data - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
         return data

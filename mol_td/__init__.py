@@ -1,7 +1,7 @@
 from .utils import *
 from .model import *
 
-models = {'SimpleVAE': SimpleTDVAE,
+models = {'SimpleVAE': SimpleVAE,
           'SimpleTDVAE': SimpleTDVAE}
 
 '''
@@ -9,6 +9,7 @@ check_types depreciated warning from tfd described here https://github.com/tenso
 suppressed with this code
 '''
 import logging
+
 logger = logging.getLogger("root")
 class CheckTypesFilter(logging.Filter):
     def filter(self, record):

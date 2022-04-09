@@ -9,75 +9,75 @@ import matplotlib.image as img
 from matplotlib.cm import get_cmap
 
 
-DEFAULT_CONFIG_PATH = './configs/default_config.yaml'
-
-
-def get_sizes(data, new_min=2, new_max=200):
-    mean = np.mean(data)
-    std = np.std(data)
-    data = np.clip(data, a_min=mean-2*std, a_max=mean+2*std)
-    data_min = np.min(data)
-    data_max = np.max(data)
+def get_sizes(data, zlim, new_min=2, new_max=200):
+    data_min, data_max = zlim
     sizes = ((data - data_min) / (data_max - data_min)) * (new_max - new_min) + new_min
-    return sizes
+    return np.clip(sizes, a_min=2, a_max=200)
 
 
-def get_image(data_r, atoms, sizes):
-    unique_atoms = np.unique(atoms)
-    n_unique_atoms = len(unique_atoms)
-    n_atoms = len(atoms)
-    
-    n_colors = 10
-    assert n_unique_atoms < n_colors
-    cmap = get_cmap('tab10')
-    lookup_table = np.zeros(n_atoms)
-    lookup_table[unique_atoms] += (np.linspace(0., 1., n_colors)[:n_unique_atoms])
+def get_images(data_rs, atoms, sizes, lims=None):
+    imgs = []
+    for data_r, size in zip(data_rs, sizes):
+        unique_atoms = np.unique(atoms)
+        n_unique_atoms = len(unique_atoms)
+        n_atoms = len(atoms)
+        
+        n_colors = 10
+        assert n_unique_atoms < n_colors
+        cmap = get_cmap('tab10')
+        lookup_table = np.zeros(n_atoms)
+        lookup_table[unique_atoms] += (np.linspace(0., 1., n_colors)[:n_unique_atoms])
 
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    ax.set_axis_off()
-    ax.view_init(0, 0)
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        if lims is None:
+            ax.set_axis_off()
+        else:
+            ax.set_xlim(lims[0]), ax.set_ylim(lims[1]), ax.set_zlim(lims[2])
+        # ax.view_init(0, 0)
+        ax.grid(False)
 
-    for position, z, s in zip(data_r, atoms, sizes):
-        ax.scatter(*(position), marker='o', color=cmap(lookup_table[int(z)]), s=s)
+        for position, z, s in zip(data_r, atoms, size):
+            ax.scatter(*(position), marker='o', color=cmap(lookup_table[int(z)]), s=s)
 
-    fig.tight_layout(pad=0)
-    ax.margins(0)
-    canvas = FigureCanvasAgg(fig)
-    canvas.draw()
-    vid = np.asarray(canvas.buffer_rgba()).astype(int)
-    plt.close()
+        fig.tight_layout(pad=0)
+        ax.margins(0)
+        canvas = FigureCanvasAgg(fig)  # from png # arr = img.imread('tmp.png') * 255
+        canvas.draw()
+        img = np.asarray(canvas.buffer_rgba()).astype(int)
+        plt.close()
+        imgs.append(img)
 
-    # plt.savefig('tmp.png')
-    # plt.show()
-    # arr1 = img.imread('tmp.png') * 255
-
-    return vid
+    return np.stack(imgs, axis=0)
 
 
-def get_video(data_r, atoms):
-    sizes = get_sizes(data_r[..., -1])  # n_t, n_atom, 3
+def get_video(data_r, atoms, sizes, lims):
+      # n_t, n_atom, 3
     data_stream = []
     for data_r_step, size_step in zip(data_r, sizes):
-        img = get_image(data_r_step, atoms, size_step)
+        img = get_images(data_r_step, atoms, size_step, lims)
         data_stream.append(img)
-    return np.stack(data_stream, axis=0)
+    return np.stack(data_stream, axis=1)
 
 
-def log_video(data, name, atoms=None):
-    n_timesteps = data.shape[0]
-    data = data.reshape((n_timesteps, -1, 6))
-    data_r = data[:, :, :3]
-    atoms = atoms.astype(int)
-    data_f = data[:, :, 3:]
+def log_wandb_videos_or_images(data, cfg, n_batch=10):
+    logs = {}
+    for k, arr in data.items():
+        n_dim = len(arr.shape)
+        arr = np.squeeze(arr[:n_batch].reshape((-1, cfg.n_atoms, 6))[..., :3])
+        arr = cfg.transform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max)
+        sizes = get_sizes(arr[..., -1], cfg.data_lims[-1])  # z positions
+        if n_dim == 2:
+            media = get_images(arr, cfg.atoms, sizes, cfg.data_lims)
+            media = [wandb.Image(m) for m in media]
+        elif n_dim == 3:
+            media = get_video(arr, cfg.atoms, sizes, cfg.data_lims)
+            media = wandb.Video(np.transpose(media, (0, 3, 1, 2)))
+        else:
+            print(f'Media {k} is shape {arr.shape}')
+        logs[k] = media
 
-    data_video = get_video(data_r, atoms)
-    wandb_video = np.transpose(data_video.copy(), (0, 3, 1, 2))
-    # wandb_video[:, :, ...] = 0
-
-    wandb.log({name: wandb.Video(wandb_video.astype(int), fps=4)}) # (time, channel, height, width)
-
-    return data_video
+    wandb.log(logs)
 
 
 def oj(*paths):

@@ -2,6 +2,7 @@
 # folders
 data/ 
 results/
+*/wandb/
 
 # vscode
 *.vscode
