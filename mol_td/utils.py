@@ -48,31 +48,33 @@ def get_images(data_rs, atoms, sizes, lims=None):
         plt.close()
         imgs.append(img)
 
-    return np.stack(imgs, axis=0)
+    return np.stack(imgs, axis=0)  # b, x, y, c
 
 
 def get_video(data_r, atoms, sizes, lims):
-      # n_t, n_atom, 3
     data_stream = []
-    for data_r_step, size_step in zip(data_r, sizes):
-        img = get_images(data_r_step, atoms, size_step, lims)
-        data_stream.append(img)
-    return np.stack(data_stream, axis=1)
+    for i in range(data_r.shape[1]):
+        img = get_images(data_r[:, i, ...], atoms, sizes[:, i, ...], lims)  # b, 1, x, y, c
+        data_stream.append(img[0])  # x, y, c
+    return np.stack(data_stream, axis=0)  # t, x, y, c 
 
 
 def log_wandb_videos_or_images(data, cfg, n_batch=10):
     logs = {}
     for k, arr in data.items():
         n_dim = len(arr.shape)
-        arr = np.squeeze(arr[:n_batch].reshape((-1, cfg.n_atoms, 6))[..., :3])
-        arr = cfg.transform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max)
-        sizes = get_sizes(arr[..., -1], cfg.data_lims[-1])  # z positions
         if n_dim == 2:
+            arr = np.squeeze(arr[:n_batch].reshape((-1, cfg.n_atoms, 6))[..., :3])
+            arr = cfg.transform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max)
+            sizes = get_sizes(arr[..., -1], cfg.data_lims[-1])  # z positions
             media = get_images(arr, cfg.atoms, sizes, cfg.data_lims)
             media = [wandb.Image(m) for m in media]
         elif n_dim == 3:
+            arr = np.squeeze(arr[:n_batch].reshape((-1, arr.shape[1], cfg.n_atoms, 6))[..., :3])[None, ...]
+            arr = cfg.transform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max)
+            sizes = get_sizes(arr[..., -1], cfg.data_lims[-1])  # z positions
             media = get_video(arr, cfg.atoms, sizes, cfg.data_lims)
-            media = wandb.Video(np.transpose(media, (0, 3, 1, 2)))
+            media = wandb.Video(np.transpose(media, (0, 3, 1, 2)), fps=2)
         else:
             print(f'Media {k} is shape {arr.shape}')
         logs[k] = media

@@ -3,6 +3,7 @@
 data/ 
 results/
 */wandb/
+
 # vscode
 *.vscode
 

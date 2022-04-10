@@ -2,7 +2,8 @@ from .utils import *
 from .model import *
 
 models = {'SimpleVAE': SimpleVAE,
-          'SimpleTDVAE': SimpleTDVAE}
+          'SimpleTDVAE': SimpleTDVAE,
+          'HierarchicalTDVAE': HierarchicalTDVAE}
 
 '''
 check_types depreciated warning from tfd described here https://github.com/tensorflow/probability/issues/1523

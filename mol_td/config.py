@@ -15,29 +15,33 @@ class Config:
     user:           str  = 'xmax1'
     project:        str  = 'test'
     id:             str  = None  # null for nada for none
-    group:          str  = 'no_group'
+    group:          str  = None
     WANDB_API_KEY:  int  = 1
 
     # MODEL
     model:                  str   = 'SimpleTDVAE'
     n_enc_layers:           int   = 2
     n_dec_layers:           int   = 2
-    n_transfer_layers:      int   = 2
-    n_embed:                list  = 20
-    prediction_std:         float = 1.
-    latent_dist_min_std:    float = 0.001  # 0.0001 cwvae
+    n_transfer_layers:      int   = 1
+    n_embed:                list  = 40
+    n_latent:               int   = 2
+    y_std:                  float = 1.
+    latent_dist_min_std:    float = 0.0001  # 0.0001 cwvae
     dropout:                float = 0.5
+    transfer_fn:            str   = 'GRU'
+    latent_activation:      str   = 'relu'
+    map_activation:         str   = 'leaky_relu'
 
     # DATA
     n_target:           int = None
     n_input:            int = None
 
     # TRAINING
-    n_epochs:           int = 50
+    n_epochs:           int = 20
     batch_size:         int = 128
-    lr:                 float = 0.001
-    n_timesteps:        int = 2
-    n_timesteps_eval:   int = 2
+    lr:                 float = 0.0001
+    n_timesteps:        int = 3
+    n_timesteps_eval:   int = 3
 
     # PATHS
     root:           str = '/home/amawi/projects/mol-td'
