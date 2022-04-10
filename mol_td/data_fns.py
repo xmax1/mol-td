@@ -48,6 +48,7 @@ def cut_remainder(data, n_batch):
     data = data[:-remainder] if remainder > 0 else data
     return data
 
+
 def prep_dataloaders(cfg, data, split=(0.7, 0.15, 0.15)):
     n_data = len(data)
 

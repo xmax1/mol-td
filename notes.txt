@@ -7,6 +7,10 @@ why is the cwvae posterior dependent on det_out from the GRUCell (as well as the
 PeepHoleLSTM, Echo State Network, NAS Cells (alternative models in the latent space)
 How to put kwargs into tree_map? 
 
+# niflheim
+ssh amawi@sylg.fysik.dtu.dk
+
+
 # ase
 https://wiki.fysik.dtu.dk/ase/
 
