@@ -2,16 +2,16 @@
 
 submission_path=/home/energy/amawi/projects/mol-td/run.sh
 
-arr=()
+
 while IFS= read -r line; do
   arr+=("$line")
 done < file
 
-while IFS= read -r line; do   arr+=("$line"); done < experiments.txt
+arr=(); while IFS= read -r line; do   arr+=("$line"); done < experiments.txt
 {#array[@]}
 ${#arr[@]}
 
-sbatch -a=0-${#arr[@]} 
+sbatch -a=0-$((${#arr[@]}-1)) run.sh
 
 ts=(LSTM GRU)
 nts=(5 10)

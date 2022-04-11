@@ -9,6 +9,7 @@
 arr=()
 while IFS= read -r line; do arr+=("$line"); done < experiments.txt
 cmd=${arr[$SLURM_ARRAY_TASK_ID]}
+len=$((${#arr[@]}-1))
 echo $cmd
 
 source ~/.bashrc

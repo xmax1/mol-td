@@ -44,6 +44,7 @@ class Config:
     lr:                 float = 0.001
     n_timesteps:        int = 3
     n_timesteps_eval:   int = 3
+    xlog_media:         bool = False
 
     # PATHS
     root:           str = '/home/amawi/projects/mol-td'
