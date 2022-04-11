@@ -24,6 +24,7 @@ parser.add_argument('--wb', action='store_true')
 parser.add_argument('-i', '--id', default='', type=str)
 parser.add_argument('-p', '--project', default='TimeDynamics', type=str)
 parser.add_argument('-g', '--group', default=None, type=str)
+parser.add_argument('-tag', '--tag', default='', type=str)
 parser.add_argument('--xlog_media', action='store_true')
 
 parser.add_argument('-m', '--model', default='HierarchicalTDVAE', type=str)
@@ -66,7 +67,8 @@ run = wandb.init(project=cfg.project,
                  entity=cfg.user, 
                  config=asdict(cfg),
                  mode=cfg.wandb_status,
-                 group=cfg.group)
+                 group=cfg.group,
+                 tags=[cfg.tag])
 
 @jit
 def train_step(params, batch, opt_state, rng):

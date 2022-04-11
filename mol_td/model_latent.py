@@ -57,11 +57,6 @@ class GRUPrior(nn.Module):
     @nn.compact
     def __call__(self, h0, z_t0):
 
-        # h1, z_t0 = nn.LSTMCell()(h0, z_t0)
-        # mean = nn.Dense(self.cfg.n_embed)(z_t0)
-        # std = jnn.softplus(nn.Dense(self.cfg.n_embed)(z_t0 + 0.54)) + self.cfg.latent_dist_min_std
-        # dist = tfd.Normal(mean, std)
-        # z_t1 = dist.sample(seed=self.make_rng('sample'))
         for _ in range(self.cfg.n_transfer_layers):
             z_t0 = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(z_t0))
 
