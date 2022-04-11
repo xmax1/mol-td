@@ -24,6 +24,7 @@ parser.add_argument('--wb', action='store_true')
 parser.add_argument('-i', '--id', default='', type=str)
 parser.add_argument('-p', '--project', default='TimeDynamics', type=str)
 parser.add_argument('-g', '--group', default=None, type=str)
+parser.add_argument('--xlog_media', action='store_true')
 
 parser.add_argument('-m', '--model', default='HierarchicalTDVAE', type=str)
 parser.add_argument('-t', '--transfer_fn', default='GRU', type=str)
@@ -34,17 +35,18 @@ parser.add_argument('-dl', '--n_dec_layers', default=2, type=int)
 parser.add_argument('-tl', '--n_transfer_layers', default=1, type=int)
 parser.add_argument('-ne', '--n_embed', default=20, type=int)
 parser.add_argument('-nl', '--n_latent', default=2, type=int)
-parser.add_argument('-y_std', '--y_std', default=1., type=int)
+parser.add_argument('-y_std', '--y_std', default=1., type=float)
 parser.add_argument('-b', '--beta', default=1000., type=int)
 parser.add_argument('--skip_connections', action='store_true')
 
 parser.add_argument('-e', '--n_epochs', default=10, type=int)
 parser.add_argument('-bs', '--batch_size', default=128, type=int)
 
+
 args = parser.parse_args()
 
 cfg = Config(**vars(args))
-data = cfg.load_data('/home/amawi/projects/mol-td/data/uracil_dft.npz')
+data = cfg.load_data('./data/uracil_dft.npz')
 cfg.initialise_model_hype()  # can be done internally, done here to show network structure depends on data
 
 train_loader, val_loader, test_loader = prep_dataloaders(cfg, data)

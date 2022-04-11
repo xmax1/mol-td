@@ -2,6 +2,13 @@
 
 submission_path=/home/energy/amawi/projects/mol-td/run.sh
 
+arr=()
+while IFS= read -r line; do
+  arr+=("$line")
+done < file
+
+while IFS= read -r line; do   arr+=("$line"); done < experiments.txt
+
 ts=(LSTM GRU)
 nts=(5 10)
 eds=(1 2)
@@ -43,11 +50,14 @@ do
                      -ne $ne \
                      -y_std $y_std \
                      -b $beta \
-                     -bs $bs \
-                     $sc"
+                     -bs $bs $sc \
+                     -g initial_sweep \
+                     -p TimeDynamics"
                   i=$((i+1))
+                  sbatch $submission_path $cmd
                   echo $i
                   echo $cmd
+                  exit
                 done
               done
             done
