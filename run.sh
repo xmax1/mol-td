@@ -3,6 +3,7 @@
 #SBATCH -N 1      # Minimum of 1 node
 #SBATCH -n 8     # 8 MPI processes per node
 #SBATCH --time=0-01:00:00 # 2 days of runtime (can be set to 7 days)
+#SBATCH -o ./slurm/output.%a.out # STDOUT
 # #SBATCH --gres=gpu:RTX3090
 
 source ~/.bashrc

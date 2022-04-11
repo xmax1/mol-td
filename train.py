@@ -25,9 +25,9 @@ parser.add_argument('-i', '--id', default='', type=str)
 parser.add_argument('-p', '--project', default='TimeDynamics', type=str)
 parser.add_argument('-g', '--group', default=None, type=str)
 
-parser.add_argument('-m', '--model', default='SimpleTDVAE', type=str)
-parser.add_argument('-t', '--transfer_fn', default='LSTM', type=str)
-parser.add_argument('-nt', '--n_timesteps', default=3, type=int)
+parser.add_argument('-m', '--model', default='HierarchicalTDVAE', type=str)
+parser.add_argument('-t', '--transfer_fn', default='GRU', type=str)
+parser.add_argument('-nt', '--n_timesteps', default=10, type=int)
 
 parser.add_argument('-el', '--n_enc_layers', default=2, type=int)
 parser.add_argument('-dl', '--n_dec_layers', default=2, type=int)
@@ -35,11 +35,12 @@ parser.add_argument('-tl', '--n_transfer_layers', default=1, type=int)
 parser.add_argument('-ne', '--n_embed', default=20, type=int)
 parser.add_argument('-nl', '--n_latent', default=2, type=int)
 parser.add_argument('-y_std', '--y_std', default=1., type=int)
+parser.add_argument('-b', '--beta', default=1000., type=int)
+parser.add_argument('--skip_connections', action='store_true')
 
 parser.add_argument('-bs', '--batch_size', default=128, type=int)
 
 args = parser.parse_args()
-
 
 cfg = Config(**vars(args))
 data = cfg.load_data('/home/amawi/projects/mol-td/data/uracil_dft.npz')
@@ -74,14 +75,12 @@ def train_step(params, batch, opt_state, rng):
     params = optax.apply_updates(params, updates)
     return loss, signal, params, opt_state, rng
 
-
 @jit
 def validation_step(params, val_batch, rng):
     rng, sample_rng, dropout_rng = rnd.split(rng, 3)
     val_fwd = partial(model.apply, training=False, rngs=dict(sample=sample_rng, dropout=dropout_rng))
     val_loss_batch, val_signal = val_fwd(params, val_batch)
     return val_loss_batch, val_signal, rng
-
 
 def accumulate_signals(storage, signal):
     signal = {k:v for k,v in signal.items() if isinstance(v, jnp.ndarray)}
@@ -94,7 +93,6 @@ def accumulate_signals(storage, signal):
             storage[k] = v
     return storage
 
-
 def filter_scalars(signal, n_batch=1., tag='', ignore=()):
     # get the jax arrays
     signal_arr = {k:v for k,v in signal.items() if ((isinstance(v, jnp.ndarray)) and (k not in ignore))}
@@ -102,8 +100,6 @@ def filter_scalars(signal, n_batch=1., tag='', ignore=()):
     scalars = {tag+k:float(v)/n_batch for k,v in signal_arr.items() if v.shape in ((1,), ())}
     # signal = {tag+k:(float(v)/n_batch) for k, v in signal.items() if isinstance(v, float)}
     return scalars 
-
-
 
 with run:
     for epoch in range(cfg.n_epochs):

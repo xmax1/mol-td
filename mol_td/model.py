@@ -61,7 +61,7 @@ class SimpleTDVAE(nn.Module):
         
         likelihood = tfd.Normal(y, self.cfg.y_std)
         
-        nll = - 4000. * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
+        nll = - self.cfg.beta * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
         kl_div =  jnp.mean(posterior['dist'].kl_divergence(prior['dist']), axis=0).sum()  # mean over the batch dimension
         loss = nll + kl_div
         
@@ -103,13 +103,22 @@ class HierarchicalTDVAE(nn.Module):
         self.decoder = MLPDecoder(self.cfg)
         self.ladder = [nn.Dense(self.cfg.n_embed) for i in range(self.cfg.n_latent)]
 
-    def __call__(self, data, z_t0: jnp.ndarray=None, training: bool=False):
+    def __call__(self, data, z_t0s: list=None, training: bool=False):
 
         n_data, nt = data.shape[:2]
 
-        data_target = data[..., :-self.cfg.n_atoms]
+        data_target = data[..., :-self.cfg.n_atoms] if training else data[:, 1:, :-self.cfg.n_atoms]
+
+        if z_t0s is None:
+            z_t0s = self.cfg.n_latent * [None]
 
         embedding = self.encoder(data)
+
+        embeddings = []
+        for latent_idx, ladder in enumerate(self.ladder):
+            embedding_tmp = activations[self.cfg.latent_activation](ladder(embedding))
+            embedding = embedding_tmp if not self.cfg.skip_connections else embedding_tmp + embedding
+            embeddings.insert(0, embedding)
 
         scan = nn.scan(lambda f, state, inputs: f(state, inputs, training=training),
                             variable_broadcast='params',
@@ -118,32 +127,23 @@ class HierarchicalTDVAE(nn.Module):
 
         priors = []
         posteriors = []                
-        for latent_idx, ladder in enumerate(self.ladder):
+        for latent_idx, (embedding, z_t0) in enumerate(zip(embeddings, z_t0s)):  # deeper latent space longer embeddeding function
 
             zero_state = self.transfer.zero_state((n_data,))
             
             if latent_idx == 0:
                 zero_state_over_time = self.transfer.zero_state((n_data, nt - int(not training)))
                 context = zero_state_over_time | {'z': jnp.zeros_like(zero_state_over_time['z'])}
-            else:
-                embedding = activations[self.cfg.latent_activation](ladder(embedding))
-            
+
             if training:
                 z_t0 = zero_state
             else:
                 if z_t0 is None:
                     z_t0 = {'z': embedding[:, 0, :]}
-                    embedding = embedding[:, 1:, :]
-                    data_target = data_target[:, 1:, :]
+                embedding = embedding[:, 1:, :]
                 z_t0 = zero_state | z_t0  # lhs overwritten by lhs
             
-            # print_dict(z_t0)
-            # print_dict(context)
-            # print(embedding.shape)
             final_state, (prior, posterior) = scan(self.transfer, z_t0, (embedding, context))
-
-            # print_dict(prior)
-            # print_dict(posterior)
 
             context = prior
 
@@ -158,7 +158,7 @@ class HierarchicalTDVAE(nn.Module):
         
         likelihood = tfd.Normal(y, self.cfg.y_std)
         
-        nll = -10000. * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
+        nll = -self.cfg.beta * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
         kl_div =  jnp.sum(jnp.array([jnp.mean(posterior['dist'].kl_divergence(prior['dist']), axis=0).sum() 
                             for prior, posterior in zip(priors, posteriors)]))  # mean over the batch dimension
         loss = nll + kl_div

@@ -31,6 +31,8 @@ class Config:
     transfer_fn:            str   = 'GRU'
     latent_activation:      str   = 'relu'
     map_activation:         str   = 'leaky_relu'
+    beta:                   float = 1000.
+    skip_connections:       bool  = False
 
     # DATA
     n_target:           int = None
@@ -51,6 +53,10 @@ class Config:
     uracil_xyz:     str = './data/uracil.xyz'
 
     def __post_init__(self):
+
+        print(f'Model: {self.model} \
+                \n n_enc_layers: {self.n_enc_layers} \
+                \n n_dec_layers: {self.n_dec_layers} ')
 
         if self.id is None:
             self.id = datetime.now().strftime('%y%m%d%H%M%S')

@@ -2,10 +2,11 @@
 
 submission_path=/home/energy/amawi/projects/mol-td/run.sh
 
-cmd = "--wb \
+cmd="--wb \
        -p test \
        -m HierarchicalTDVAE \
        -nt 10 \
+       -i niflheim
        "
 
 sbatch --gres=gpu:RTX3090 --job-name=actsweep $submission_path $cmd
