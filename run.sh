@@ -3,8 +3,13 @@
 #SBATCH -N 1-1
 #SBATCH -n 8
 #SBATCH --gres=gpu:1
-#SBATCH --time=0-01:00:00 # 2 days of runtime (can be set to 7 days)
+#SBATCH --time=0-00:30:00 # 2 days of runtime (can be set to 7 days)
 #SBATCH -o ./slurm/output.%j.out # STDOUT
+
+arr=()
+while IFS= read -r line; do arr+=("$line"); done < experiments.txt
+cmd=${arr[$SLURM_ARRAY_TASK_ID]}
+echo $cmd
 
 source ~/.bashrc
 
@@ -17,4 +22,4 @@ export OPENBLAS_NUM_THREADS=1
 
 cd /home/energy/amawi/projects/mol-td
 
-python train.py "$@"
+python train.py $cmd

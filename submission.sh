@@ -8,6 +8,10 @@ while IFS= read -r line; do
 done < file
 
 while IFS= read -r line; do   arr+=("$line"); done < experiments.txt
+{#array[@]}
+${#arr[@]}
+
+sbatch -a=0-${#arr[@]} 
 
 ts=(LSTM GRU)
 nts=(5 10)
