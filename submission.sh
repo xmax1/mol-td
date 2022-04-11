@@ -2,14 +2,73 @@
 
 submission_path=/home/energy/amawi/projects/mol-td/run.sh
 
-cmd="--wb \
-       -p test \
-       -m HierarchicalTDVAE \
-       -nt 10 \
-       -i niflheim
-       "
+ts=(LSTM GRU)
+nts=(5 10)
+eds=(1 2)
+tls=(1 2)
+nes=(20 40)
+nls=(1 2 3)
+y_stds=(0.5 1.0)
+betas=(1 2000 4000 8000)
+scs=(--skip_connections "")
+bss=(32 128)
 
-sbatch --gres=gpu:RTX3090 --job-name=actsweep $submission_path $cmd
+i=0
+
+for t in "${ts[@]}"
+do 
+  for nt in "${nts[@]}"
+  do
+    for ed in "${eds[@]}"
+    do
+      for tl in "${tls[@]}"
+      do
+        for ne in "${nes[@]}"
+        do
+          for y_std in "${y_stds[@]}"
+          do
+            for beta in "${betas[@]}"
+            do
+              for sc in "${scs[@]}"
+              do
+                for bs in "${bss[@]}"
+                do
+                  cmd="--wb \
+                     -t $t \
+                     -m HierarchicalTDVAE \
+                     -nt $nt \
+                     -el $ed \
+                     -dl $ed \
+                     -tl $tl \
+                     -ne $ne \
+                     -y_std $y_std \
+                     -b $beta \
+                     -bs $bs \
+                     $sc"
+                  i=$((i+1))
+                  echo $i
+                  echo $cmd
+                done
+              done
+            done
+          done
+        done
+      done
+    done
+  done
+done
+
+
+
+
+# cmd="--wb \
+#        -p test \
+#        -m HierarchicalTDVAE \
+#        -nt 10 \
+#        -i niflheim
+#        "
+
+# sbatch --gres=gpu:RTX3090 --job-name=actsweep $submission_path $cmd
 
 
 # if [[ $2 -eq 0 ]]; then

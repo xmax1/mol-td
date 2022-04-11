@@ -39,9 +39,9 @@ class Config:
     n_input:            int = None
 
     # TRAINING
-    n_epochs:           int = 20
+    n_epochs:           int = 10
     batch_size:         int = 128
-    lr:                 float = 0.0001
+    lr:                 float = 0.001
     n_timesteps:        int = 3
     n_timesteps_eval:   int = 3
 

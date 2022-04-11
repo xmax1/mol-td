@@ -38,6 +38,7 @@ parser.add_argument('-y_std', '--y_std', default=1., type=int)
 parser.add_argument('-b', '--beta', default=1000., type=int)
 parser.add_argument('--skip_connections', action='store_true')
 
+parser.add_argument('-e', '--n_epochs', default=10, type=int)
 parser.add_argument('-bs', '--batch_size', default=128, type=int)
 
 args = parser.parse_args()
