@@ -14,16 +14,17 @@ class MLPTransfer(nn.Module):
         mean=jnp.zeros(leading_dims+(self.cfg.n_embed,))
         std=jnp.ones(leading_dims+(self.cfg.n_embed,))
         dist = tfd.Normal(mean, std)
+        cell_out = dist.sample(seed=self.make_rng('sample'))
         z = dist.sample(seed=self.make_rng('sample'))
         
         if self.cfg.transfer_fn == 'MLP':
             state =  dict(z=z, mean=mean, std=std)
         elif self.cfg.transfer_fn == 'LSTM':
             h = nn.LSTMCell.initialize_carry(rnd.PRNGKey(self.cfg.seed), leading_dims, self.cfg.n_embed)
-            state =  dict(h=h, z=z, mean=mean, std=std)
+            state =  dict(h=h, cell_out=cell_out, z=z, mean=mean, std=std)
         elif self.cfg.transfer_fn == 'GRU':
             h = nn.GRUCell.initialize_carry(rnd.PRNGKey(self.cfg.seed), leading_dims, self.cfg.n_embed)
-            state =  dict(h=h, z=z, mean=mean, std=std)
+            state =  dict(h=h, cell_out=cell_out, z=z, mean=mean, std=std)
         return state
 
     @nn.compact
@@ -39,8 +40,10 @@ class MLPTransfer(nn.Module):
             prior = MLPPrior(self.cfg)(z_t0)
         elif self.cfg.transfer_fn == 'LSTM':
             prior = LSTMPrior(self.cfg)(prev_state['h'], z_t0)
+            embedding = jnp.concatenate([embedding, prior['cell_out']], axis=-1)
         elif self.cfg.transfer_fn == 'GRU':
             prior = GRUPrior(self.cfg)(prev_state['h'], z_t0)
+            embedding = jnp.concatenate([embedding, prior['cell_out']], axis=-1)
 
         posterior = MLPPosterior(self.cfg)(embedding) if training else prior
         
@@ -62,14 +65,15 @@ class GRUPrior(nn.Module):
         for _ in range(self.cfg.n_transfer_layers):
             z_t0 = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(z_t0))
 
-        h1, z_t0 = nn.GRUCell()(h0, z_t0)  # (carry, outputs) = f(carry, inputs) # https://flax.readthedocs.io/en/latest/_autosummary/flax.linen.GRUCell.html
+        h1, cell_out = nn.GRUCell()(h0, z_t0)  # (carry, outputs) = f(carry, inputs) # https://flax.readthedocs.io/en/latest/_autosummary/flax.linen.GRUCell.html
 
-        mean = nn.Dense(self.cfg.n_embed)(z_t0)
-        std = nn.softplus(nn.Dense(self.cfg.n_embed)(z_t0 + .54)) + self.cfg.latent_dist_min_std
+        mean = nn.Dense(self.cfg.n_embed)(cell_out)
+        std = nn.softplus(nn.Dense(self.cfg.n_embed)(cell_out + .54)) + self.cfg.latent_dist_min_std
         dist = tfd.Normal(mean, std)
         z_t1 = dist.sample(seed=self.make_rng('sample'))
 
         return dict(h=h1,
+                    cell_out=cell_out,
                     z=z_t1,
                     mean=mean,
                     std=std) 
@@ -85,14 +89,15 @@ class LSTMPrior(nn.Module):
         for _ in range(self.cfg.n_transfer_layers):
             z_t0 = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(z_t0))
 
-        h1, z_t0 = nn.LSTMCell()(h0, z_t0)
+        h1, cell_out = nn.LSTMCell()(h0, z_t0)
 
-        mean = nn.Dense(self.cfg.n_embed)(z_t0)
-        std = jnn.softplus(nn.Dense(self.cfg.n_embed)(z_t0 + 0.54)) + self.cfg.latent_dist_min_std
+        mean = nn.Dense(self.cfg.n_embed)(cell_out)
+        std = jnn.softplus(nn.Dense(self.cfg.n_embed)(cell_out + 0.54)) + self.cfg.latent_dist_min_std
         dist = tfd.Normal(mean, std)
         z_t1 = dist.sample(seed=self.make_rng('sample'))
 
         return dict(h=h1,
+                    cell_out=cell_out,
                     z=z_t1,
                     mean=mean,
                     std=std) 

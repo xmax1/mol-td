@@ -121,9 +121,9 @@ class HierarchicalTDVAE(nn.Module):
             embeddings.insert(0, embedding)
 
         scan = nn.scan(lambda f, state, inputs: f(state, inputs, training=training),
-                            variable_broadcast='params',
-                            split_rngs=dict(params=False, sample=True, dropout=True),
-                            in_axes=1, out_axes=1)
+                       variable_broadcast='params',
+                       split_rngs=dict(params=False, sample=True, dropout=True),
+                       in_axes=1, out_axes=1)
 
         priors = []
         posteriors = []                
