@@ -42,6 +42,7 @@ parser.add_argument('--skip_connections', action='store_true')
 
 parser.add_argument('-e', '--n_epochs', default=10, type=int)
 parser.add_argument('-bs', '--batch_size', default=128, type=int)
+parser.add_argument('-lr', '--lr', default=0.001, type=float)
 
 
 args = parser.parse_args()
@@ -68,7 +69,7 @@ run = wandb.init(project=cfg.project,
                  config=asdict(cfg),
                  mode=cfg.wandb_status,
                  group=cfg.group,
-                 tags=[cfg.tag])
+                 tags=[cfg.tag,])
 
 @jit
 def train_step(params, batch, opt_state, rng):

@@ -1,18 +1,19 @@
 import re
 import os
 
-ts=['LSTM',]
+ts=['GRU',]
 nts=(5,)
 eds=(2,)
 tls=(2,)
 nes=(30,)
 nls=(1, 2, 3)
-y_stds=(1.0,)
-betas=(1, 2000, 8000)
-scs=('--skip_connections', '')
-bss=(32, 128, 256)
+y_stds=(0.1,)
+betas=(10,)
+scs=('',)
+bss=(128,)
 
 run='./run.sh'
+tag='no_tag'
 
 cmds = []
 for t in ts:
@@ -35,10 +36,12 @@ for t in ts:
                                                 -nl {nl} \
                                                 -y_std {y_std} \
                                                 -b {beta} \
+                                                -e 10 \
                                                 {sc} \
                                                 -bs {bs} \
-                                                -g initial_sweep2 \
-                                                -p TimeDynamics'
+                                                -g post_into_prior \
+                                                -p TimeDynamics \
+                                                -tag {tag}'
                                         cmds.append(re.sub(r'\s+', ' ', cmd))
 
 # import re

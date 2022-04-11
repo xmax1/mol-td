@@ -14,7 +14,7 @@ class Config:
     wandb_status:   str  = 'offline'
     user:           str  = 'xmax1'
     project:        str  = 'test'
-    tag:            str  = 'tag'
+    tag:            str  = ''
     id:             str  = None  # null for nada for none
     group:          str  = None
     WANDB_API_KEY:  int  = 1

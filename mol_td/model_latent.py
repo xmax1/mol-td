@@ -40,10 +40,10 @@ class MLPTransfer(nn.Module):
             prior = MLPPrior(self.cfg)(z_t0)
         elif self.cfg.transfer_fn == 'LSTM':
             prior = LSTMPrior(self.cfg)(prev_state['h'], z_t0)
-            embedding = jnp.concatenate([embedding, prior['cell_out']], axis=-1)
+            #embedding = jnp.concatenate([embedding, prior['cell_out']], axis=-1)
         elif self.cfg.transfer_fn == 'GRU':
             prior = GRUPrior(self.cfg)(prev_state['h'], z_t0)
-            embedding = jnp.concatenate([embedding, prior['cell_out']], axis=-1)
+            #embedding = jnp.concatenate([embedding, prior['cell_out']], axis=-1)
 
         posterior = MLPPosterior(self.cfg)(embedding) if training else prior
         
