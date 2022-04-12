@@ -59,7 +59,7 @@ def get_video(data_r, atoms, sizes, lims):
     return np.stack(data_stream, axis=0)  # t, x, y, c 
 
 
-def log_wandb_videos_or_images(data, cfg, n_batch=10):
+def log_wandb_videos_or_images(data, cfg, n_batch=10, fps=2):
     logs = {}
     for k, arr in data.items():
         n_dim = len(arr.shape)
@@ -74,7 +74,7 @@ def log_wandb_videos_or_images(data, cfg, n_batch=10):
             arr = cfg.untransform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max, mean=cfg.data_r_mean)
             sizes = get_sizes(arr[..., -1], cfg.data_lims[-1])  # z positions
             media = get_video(arr, cfg.atoms, sizes, cfg.data_lims)
-            media = wandb.Video(np.transpose(media, (0, 3, 1, 2)), fps=2)
+            media = wandb.Video(np.transpose(media, (0, 3, 1, 2)), fps=fps)
         else:
             print(f'Media {k} is shape {arr.shape}')
         logs[k] = media

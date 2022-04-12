@@ -72,8 +72,9 @@ def prep_dataloaders(cfg, data, split=(0.7, 0.15, 0.15)):
 
         key = rnd.PRNGKey(cfg.seed)
         idxs = rnd.permutation(key, jnp.arange(0, n_trajectories))
-        tr_slice, val_slice, test_slice = slice(0, n_train), slice(n_train, n_train+n_val), slice(n_train+n_val, n_train+n_val+n_test)
-        tr_idxs, val_idxs, test_idxs = idxs[tr_slice], idxs[val_slice], idxs[test_slice]
+        # tr_slice, val_slice, test_slice = slice(0, n_train), slice(n_train, n_train+n_val), slice(n_train+n_val, n_train+n_val+n_test)
+        # tr_idxs, val_idxs, test_idxs = idxs[tr_slice], idxs[val_slice], idxs[test_slice]
+        tr_idxs, val_idxs, test_idxs = idxs[:n_train], idxs[n_train:(n_val+n_train)], idxs[-n_test:]
         
         val_idxs = jnp.delete(val_idxs, jnp.where(val_idxs==0)[0])  # remove if first one! 
         test_idxs = jnp.delete(test_idxs, jnp.where(test_idxs==0)[0])  # remove if first one! 
@@ -84,6 +85,8 @@ def prep_dataloaders(cfg, data, split=(0.7, 0.15, 0.15)):
         val_data = cut_remainder(jnp.concatenate([initial_states_val, data[val_idxs]], axis=1), cfg.batch_size)
         test_data = cut_remainder(jnp.concatenate([initial_states_test, data[test_idxs]], axis=1), cfg.batch_size)
 
+        print(f'Datasets length: Train {len(tr_data)} Val {len(val_data)} Test {len(test_data)}')
+        print(f'Some idxs:  \n Train {tr_idxs[:5]} \n Val {val_idxs[:5]}')
     else:
 
         key = rnd.PRNGKey(cfg.seed)
@@ -117,7 +120,7 @@ class DataLoader:
         Raises:
             Exception: Requested batch size exceeds data-length
 
-        Thieved from https://github.com/SimiPixel/jax_dataloader
+        Thieved from https://github.com/SimiPixel/jax_dataloader    
         """
 
         self.batch_size = cfg.batch_size
@@ -128,8 +131,6 @@ class DataLoader:
         self.data = data
         self.target = data[..., :-cfg.n_atoms]
         
-        # Shuffle stuff
-        self._slices = [slice(i,i+self.batch_size) for i in range(0, data.shape[0], self.batch_size)]  # removes the remainder
         self._shuffle = shuffle
         self._order = jnp.arange(0, data.shape[0])
         self.key = rnd.PRNGKey(self.seed)
@@ -152,7 +153,7 @@ class DataLoader:
             return self.key
 
     def __len__(self):
-        return len(self._slices)
+        return len(self._order)//self.batch_size
 
     def __iter__(self):
         self._exhausted_batches = 0
@@ -161,10 +162,12 @@ class DataLoader:
     def __next__(self):
         
         i = self._exhausted_batches
+        start = i * self.batch_size
+        stop  = (i+1) * self.batch_size
 
         if i < len(self):
-            batch = self.data[(self._order[self._slices[i]],)]
-            target = self.target[(self._order[self._slices[i]],)]
+            batch = self.data[(self._order[start:stop],)]
+            target = self.target[(self._order[start:stop],)]
             self._exhausted_batches += 1
             return batch, target
         else:
