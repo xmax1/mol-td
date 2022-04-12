@@ -35,15 +35,16 @@ class MLPTransfer(nn.Module):
             z_t0 = jnp.concatenate([prev_state['z'], context['z']], axis=-1)
         else:
             z_t0 = prev_state['z']
-
+            
         if self.cfg.transfer_fn == 'MLP':
             prior = MLPPrior(self.cfg)(z_t0)
         elif self.cfg.transfer_fn == 'LSTM':
             prior = LSTMPrior(self.cfg)(prev_state['h'], z_t0)
-            #embedding = jnp.concatenate([embedding, prior['cell_out']], axis=-1)
         elif self.cfg.transfer_fn == 'GRU':
             prior = GRUPrior(self.cfg)(prev_state['h'], z_t0)
-            #embedding = jnp.concatenate([embedding, prior['cell_out']], axis=-1)
+
+        if self.cfg.post_into_prior:
+            embedding = jnp.concatenate([embedding, prior['cell_out']], axis=-1)
 
         posterior = MLPPosterior(self.cfg)(embedding) if training else prior
         
@@ -104,6 +105,8 @@ class MLPPosterior(nn.Module):
 
     @nn.compact
     def __call__(self, embedding):
+
+        embedding = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(embedding))
         
         mean = nn.Dense(self.cfg.n_embed)(embedding)
         std = jnn.softplus(nn.Dense(self.cfg.n_embed)(embedding + 0.54)) + self.cfg.latent_dist_min_std

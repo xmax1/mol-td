@@ -14,7 +14,7 @@ class Config:
     wandb_status:   str  = 'offline'
     user:           str  = 'xmax1'
     project:        str  = 'test'
-    tag:            str  = ''
+    tag:            str  = 'no_tag'
     id:             str  = None  # null for nada for none
     group:          str  = None
     WANDB_API_KEY:  int  = 1
@@ -34,6 +34,8 @@ class Config:
     map_activation:         str   = 'leaky_relu'
     beta:                   float = 1000.
     skip_connections:       bool  = False
+    post_into_prior:        bool  = False
+    likelihood_prior:       bool  = False
 
     # DATA
     n_target:           int = None
@@ -80,37 +82,43 @@ class Config:
     #     with (self.exp_rootdir / "config.yml").open("w") as f:
     #         yaml.dump(asdict(self), f, default_flow_style=False)
 
+    def get_stats(self, data, axis=0):
+        return jnp.min(data, axis=axis), jnp.max(data, axis=axis), jnp.mean(data, axis=axis)
+
     def load_data(self, path):
         raw_data = np.load(path)
         positions = raw_data['R']
-        forces = raw_data['F']
-        self.atoms = raw_data['z']
-        self.data_r_min = jnp.min(positions)
-        self.data_r_max = jnp.max(positions)
-        self.data_f_min = jnp.min(forces)
-        self.data_f_max = jnp.max(forces)
-        self.data_atoms_min = jnp.min(self.atoms)
-        self.data_atoms_max = jnp.max(self.atoms)
-
         self.n_data, self.n_atoms, _ = positions.shape
+        positions = positions.reshape(-1, 3)
+        forces = raw_data['F'].reshape(-1, 3)
+        self.atoms = raw_data['z'].reshape(-1)
+
+        self.data_r_min, self.data_r_max, self.data_r_mean = self.get_stats(positions)
+        self.data_f_min, self.data_f_max, self.data_f_mean = self.get_stats(forces)
+        self.data_atoms_min, self.data_atoms_max, self.data_atoms_mean = self.get_stats(self.atoms)
+
+        self.data_lims = tuple((self.data_r_min[i], self.data_r_max[i]) for i in range(3))
+
+        positions = self.transform(positions, self.data_r_min, self.data_r_max, mean=self.data_r_mean)
+        forces = self.transform(forces, self.data_f_min, self.data_f_max, mean=self.data_f_mean)
+        atoms = self.transform(self.atoms, self.data_atoms_min, self.data_atoms_max, mean=self.data_atoms_mean)[None, :].repeat(self.n_data, axis=0)
+
+        # pos_mean = np.mean(positions.reshape((-1, 3)), axis=0)
+        # pos_std = np.std(positions.reshape((-1, 3)), axis=0)
+        # a_min = pos_mean-2*pos_std
+        # a_max = pos_mean+2*pos_std
+        # self.data_lims = tuple((vmin, vmax) for vmin, vmax in zip(a_min, a_max))
         
-        pos_mean = np.mean(positions.reshape((-1, 3)), axis=0)
-        pos_std = np.std(positions.reshape((-1, 3)), axis=0)
-        a_min = pos_mean-2*pos_std
-        a_max = pos_mean+2*pos_std
-        self.data_lims = tuple((vmin, vmax) for vmin, vmax in zip(a_min, a_max))
-        print(f'Position mean: {pos_mean} \n Position std: {pos_std} \n Lims: {self.data_lims} \
-                \n F-Lims: {float(self.data_f_min):.4f} {float(self.data_f_max):.4f} \
+        
+        print(f' Pos-Lims: {tuple((float(self.data_r_min[i]), float(self.data_r_max[i])) for i in range(3))} \
+                \n F-Lims: {tuple((float(self.data_f_min[i]), float(self.data_f_max[i])) for i in range(3))} \
                 \n A-Lims: {int(self.data_atoms_min)} {int(self.data_atoms_max)}    ')
 
-        positions = self.transform(positions, self.data_r_min, self.data_r_max)
-        forces = self.transform(raw_data['F'], self.data_f_min, self.data_f_max)
-        atoms = self.transform(self.atoms, self.data_atoms_min, self.data_atoms_max)[None, :].repeat(self.n_data, axis=0)
 
         self.n_features = self.n_atoms * (3 + 3 + 1)
         self.n_target_features = self.n_features - self.n_atoms
         
-        data = jnp.concatenate([positions, forces], axis=-1).reshape(self.n_data, -1)
+        data = jnp.concatenate([positions.reshape(-1, self.n_atoms, 3), forces.reshape(-1, self.n_atoms, 3)], axis=-1).reshape(self.n_data, -1)
         data = jnp.concatenate([data, atoms], axis=-1)
 
         return data
@@ -124,6 +132,14 @@ class Config:
     def total_filters(self):
         return self.filters * self.channels_mult
 
-    def transform(self, data, old_min, old_max, new_min=-1, new_max=1):
+    def untransform(self, data, old_min, old_max, new_min=-1, new_max=1, mean=None):
+        data = ((data - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
+        if mean is not None:
+            data = data + mean
+        return data
+
+    def transform(self, data, old_min, old_max, new_min=-1, new_max=1, mean=None):
+        if mean is not None:
+            data = data - mean
         data = ((data - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
         return data

@@ -65,13 +65,13 @@ def log_wandb_videos_or_images(data, cfg, n_batch=10):
         n_dim = len(arr.shape)
         if n_dim == 2:
             arr = np.squeeze(arr[:n_batch].reshape((-1, cfg.n_atoms, 6))[..., :3])
-            arr = cfg.transform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max)
+            arr = cfg.untransform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max, mean=cfg.data_r_mean)
             sizes = get_sizes(arr[..., -1], cfg.data_lims[-1])  # z positions
             media = get_images(arr, cfg.atoms, sizes, cfg.data_lims)
             media = [wandb.Image(m) for m in media]
         elif n_dim == 3:
             arr = np.squeeze(arr[:n_batch].reshape((-1, arr.shape[1], cfg.n_atoms, 6))[..., :3])[None, ...]
-            arr = cfg.transform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max)
+            arr = cfg.untransform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max, mean=cfg.data_r_mean)
             sizes = get_sizes(arr[..., -1], cfg.data_lims[-1])  # z positions
             media = get_video(arr, cfg.atoms, sizes, cfg.data_lims)
             media = wandb.Video(np.transpose(media, (0, 3, 1, 2)), fps=2)

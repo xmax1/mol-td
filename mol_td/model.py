@@ -160,8 +160,9 @@ class HierarchicalTDVAE(nn.Module):
         
         nll = -self.cfg.beta * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
         
-        likelihood_prior = tfd.Normal(self.decoder(prior('z')), self.cfg.y_std)
-        nll = nll-self.cfg.beta * jnp.mean(likelihood_prior.log_prob(data_target), axis=0).sum()
+        if self.cfg.likelihood_prior:
+            likelihood_prior = tfd.Normal(self.decoder(prior['z']), self.cfg.y_std)
+            nll = nll - self.cfg.beta * jnp.mean(likelihood_prior.log_prob(data_target), axis=0).sum()
 
         kl_div =  jnp.sum(jnp.array([jnp.mean(posterior['dist'].kl_divergence(prior['dist']), axis=0).sum() 
                             for prior, posterior in zip(priors, posteriors)]))  # mean over the batch dimension
