@@ -14,6 +14,10 @@ echo $cmd
 
 source ~/.bashrc
 
+module load GCC
+module load CUDA/11.4.1
+module load cuDNN
+
 conda activate td
 
 export MKL_NUM_THREADS=1

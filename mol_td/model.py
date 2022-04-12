@@ -16,8 +16,8 @@ def describe_distributions(distributions):
     print('\n'.join([str(d) for d in distributions]))
 
 
-def mean_r(x, y):
-    return jnp.mean(jnp.sum((x-y)**2, axis=-1)**0.5)
+def mean_r(x, y, axis=0):
+    return jnp.mean(jnp.sum((x-y)**2, axis=-1)**0.5, axis=axis)
 
 
 class SimpleTDVAE(nn.Module):
@@ -173,7 +173,8 @@ class HierarchicalTDVAE(nn.Module):
         y_r = y.reshape((n_data, self.cfg.n_timesteps, self.cfg.n_atoms, 6))[..., :3]
         y_force = y.reshape((n_data, self.cfg.n_timesteps, self.cfg.n_atoms, 6))[..., 3:6]
 
-        y_mean_r = mean_r(data_r, y_r)
+        y_mean_r_over_time = mean_r(data_r, y_r, axis=(0, 2))
+        y_mean_r = jnp.mean(y_mean_r_over_time, axis=0)
         
         signal = dict(posterior_std=posterior['std'].mean(),
                       loss=loss,
@@ -182,6 +183,7 @@ class HierarchicalTDVAE(nn.Module):
                       prior=prior,
                       posterior=posterior,
                       y=y,
+                      y_mean_r_over_time=y_mean_r_over_time,
                       y_mean_r=y_mean_r,
                       data_r=data_r,
                       data_force=data_force,

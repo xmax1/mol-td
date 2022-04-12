@@ -18,7 +18,7 @@ bss=('-bs 128',)
 lrs=('-lr 0.001', )
 es=('-e 10', )
 tag=('-tag no_tag', )
-other=('--wb -p TimeDynamics -g initial_sweep3', )
+other=('--wb -p TimeDynamics -g initial_sweep4', )
 
 list = [ts, nts, els, tls, nes, nls, y_stds, betas, post_into_prior, scs, bss, lrs, es, tag, other]
 cmds = [p for p in itertools.product(*list)]

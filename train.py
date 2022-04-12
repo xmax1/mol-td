@@ -133,6 +133,11 @@ with run:
 
             wandb.log(signal)
 
+            y_mean_r_over_time = jnp.mean(jnp.stack(signals['y_mean_r_over_time'], axis=0), axis=0)
+            data = [[x, y] for (x, y) in zip(range(1, y_mean_r_over_time.shape[0]+1), y_mean_r_over_time) ]
+            table = wandb.Table(data=data, columns = ["x", "y"])
+            wandb.log({"y_mean_r_over_time" : wandb.plot.line(table, "x", "y", title="y_mean_r_over_time")})
+
             media_logs = {'val_posterior_y_eval': val_signal['y'],
                           'val_ground_truth': val_batch[..., :-cfg.n_atoms],
                           'val_posterior_y': model.apply(params, val_batch[:, 1:, :], training=True, 
