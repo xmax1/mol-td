@@ -23,45 +23,46 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--wb', action='store_true')
 parser.add_argument('-i', '--id', default='', type=str)
 parser.add_argument('-p', '--project', default='TimeDynamics', type=str)
-parser.add_argument('-g', '--group', default=None, type=str)
+parser.add_argument('-g', '--group', default='4_18_22', type=str)
 parser.add_argument('-tag', '--tag', default='no_tag', type=str)
 parser.add_argument('--xlog_media', action='store_true')
 
 parser.add_argument('-m', '--model', default='HierarchicalTDVAE', type=str)
-parser.add_argument('-t', '--transfer_fn', default='LSTM', type=str)
-parser.add_argument('-nt', '--n_timesteps', default=10, type=int)
+parser.add_argument('-t', '--transfer_fn', default='GRU', type=str)
+parser.add_argument('-enc', '--encoder', default='GNN', type=str)  # GCN for graph, MLP for line
+parser.add_argument('-dec', '--decoder', default='MLP', type=str)  # GCN for graph, MLP for line
+parser.add_argument('-nt', '--n_timesteps', default=8, type=int)
+parser.add_argument('-net', '--n_eval_timesteps', default=8, type=int)
+parser.add_argument('-new', '--n_eval_warmup', default=None, type=int)
 
-parser.add_argument('-el', '--n_enc_layers', default=1, type=int)
-parser.add_argument('-dl', '--n_dec_layers', default=1, type=int)
-parser.add_argument('-tl', '--n_transfer_layers', default=1, type=int)
+parser.add_argument('-nenc', '--n_enc_layers', default=2, type=int)
+parser.add_argument('-ndec', '--n_dec_layers', default=2, type=int)
+parser.add_argument('-tl', '--n_transfer_layers', default=2, type=int)
 parser.add_argument('-ne', '--n_embed', default=20, type=int)
-parser.add_argument('-nl', '--n_latent', default=1, type=int)
-parser.add_argument('-y_std', '--y_std', default=0.05, type=float)
-parser.add_argument('-b', '--beta', default=10., type=int)
+parser.add_argument('-nl', '--n_latent', default=2, type=int)
+parser.add_argument('-ystd', '--y_std', default=1., type=float)
+parser.add_argument('-b', '--beta', default=10., type=float)
 parser.add_argument('--skip_connections', action='store_true')
-parser.add_argument('--post_into_prior', action='store_true')
 parser.add_argument('--likelihood_prior', action='store_true')
 
-
-parser.add_argument('-e', '--n_epochs', default=10, type=int)
-parser.add_argument('-bs', '--batch_size', default=128, type=int)
+parser.add_argument('-e', '--n_epochs', default=50, type=int)
+parser.add_argument('-bs', '--batch_size', default=64, type=int)
 parser.add_argument('-lr', '--lr', default=0.001, type=float)
-
 
 args = parser.parse_args()
 
 cfg = Config(**vars(args))
-data = cfg.load_data('./data/uracil_dft.npz')
+data, target = cfg.load_data('./data/uracil_dft.npz')
 cfg.initialise_model_hype()  # can be done internally, done here to show network structure depends on data
 
-train_loader, val_loader, test_loader = prep_dataloaders(cfg, data)
+train_loader, val_loader, test_loader = prep_dataloaders(cfg, data, target)
 
 model = models[cfg.model](cfg)
 
 rng, params_rng, sample_rng, dropout_rng = rnd.split(rnd.PRNGKey(cfg.seed), 4)
-ex_batch, ex_target = next(train_loader)
+ex_batch = next(train_loader)
 
-params = model.init(dict(params=params_rng, sample=sample_rng, dropout=dropout_rng), ex_batch, training=True)
+params = model.init(dict(params=params_rng, sample=sample_rng, dropout=dropout_rng), ex_batch, training=True, sketch=True)
 
 tx = optax.adam(learning_rate=cfg.lr)
 opt_state = tx.init(params)
@@ -84,12 +85,16 @@ def train_step(params, batch, opt_state, rng):
     params = optax.apply_updates(params, updates)
     return loss, signal, params, opt_state, rng
 
+
 @jit
 def validation_step(params, val_batch, rng):
+    warm_up_batch, eval_batch = val_batch
     rng, sample_rng, dropout_rng = rnd.split(rng, 3)
     val_fwd = partial(model.apply, training=False, rngs=dict(sample=sample_rng, dropout=dropout_rng))
-    val_loss_batch, val_signal = val_fwd(params, val_batch)
+    val_loss_batch, val_signal = val_fwd(params, warm_up_batch)
+    val_loss_batch, val_signal = val_fwd(params, eval_batch, latent_states=val_signal['latent_states'])
     return val_loss_batch, val_signal, rng
+
 
 def accumulate_signals(storage, signal):
     signal = {k:v for k,v in signal.items() if isinstance(v, jnp.ndarray)}
@@ -102,6 +107,7 @@ def accumulate_signals(storage, signal):
             storage[k] = v
     return storage
 
+
 def filter_scalars(signal, n_batch=1., tag='', ignore=()):
     # get the jax arrays
     signal_arr = {k:v for k,v in signal.items() if ((isinstance(v, jnp.ndarray)) and (k not in ignore))}
@@ -110,9 +116,10 @@ def filter_scalars(signal, n_batch=1., tag='', ignore=()):
     # signal = {tag+k:(float(v)/n_batch) for k, v in signal.items() if isinstance(v, float)}
     return scalars 
 
+
 with run:
     for epoch in range(cfg.n_epochs):
-        for batch_idx, (batch, target) in enumerate(tqdm(train_loader)):
+        for batch_idx, batch in enumerate(tqdm(train_loader)):
 
             loss, tr_signal, params, opt_state, rng = train_step(params, batch, opt_state, rng)
             
@@ -123,8 +130,9 @@ with run:
         if val_loader is not None:
 
             signals = {}
-            for val_batch, target in val_loader:
+            for val_batch in val_loader:
                 val_loss_batch, val_signal, rng = validation_step(params, val_batch, rng)
+
                 signals = accumulate_signals(signals, val_signal)
 
             val_loader.shuffle()
@@ -138,12 +146,14 @@ with run:
             table = wandb.Table(data=data, columns = ["x", "y"])
             wandb.log({"y_mean_r_over_time" : wandb.plot.line(table, "x", "y", title="y_mean_r_over_time")})
 
-            media_logs = {'val_posterior_y_eval': val_signal['y'],
-                          'val_ground_truth': val_batch[..., :-cfg.n_atoms],
-                          'val_posterior_y': model.apply(params, val_batch[:, 1:, :], training=True, 
-                                                         rngs=dict(sample=sample_rng, dropout=dropout_rng))[1]['y'],
-                          'tr_ground_truth': batch[:, 1:, :-cfg.n_atoms],
-                          'tr_posterior_y': tr_signal['y']}
+            val_posterior_y = model.apply(params, val_batch[0], training=True, 
+                                rngs=dict(sample=sample_rng, dropout=dropout_rng))[1]['y_r']
+
+            media_logs = {'val_posterior_y_eval': val_signal['y_r'],
+                          'val_ground_truth': val_signal['data_target'],
+                          'val_posterior_y': val_posterior_y,
+                          'tr_ground_truth': tr_signal['data_target'],
+                          'tr_posterior_y': tr_signal['y_r']}
         
             log_wandb_videos_or_images(media_logs, cfg, n_batch=1)
 

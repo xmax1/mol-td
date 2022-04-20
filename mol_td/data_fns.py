@@ -30,13 +30,6 @@ def get_split(n_data, seed=1, split=(0.7, 0.15, 0.15)):
     return train_idxs, val_idxs, test_idxs
 
 
-def cut_remainder(idxs, batch_size):
-    n_data = len(idxs)
-    n_batches = n_data // batch_size
-    n_remainder = n_data - n_batches * batch_size 
-    return idxs[:-n_remainder]
-
-
 def create_loader(data, target, idxs, batch_size):
     n_batches, remainder = divmod(len(idxs), batch_size)
     return zip(data[idxs[:(n_batches*batch_size)]].reshape((n_batches, batch_size, data.shape[-1])), 
@@ -49,7 +42,89 @@ def cut_remainder(data, n_batch):
     return data
 
 
-def prep_dataloaders(cfg, data, split=(0.7, 0.15, 0.15)):
+def filter_data_with_mechanism_for_including_first_data_point(data, idxs, batch_size):
+    tr_idxs, val_idxs, test_idxs = idxs
+
+    val_idxs = jnp.delete(val_idxs, jnp.where(val_idxs==0)[0])  # remove if first one! 
+    test_idxs = jnp.delete(test_idxs, jnp.where(test_idxs==0)[0])  # remove if first one! 
+    initial_states_val = jnp.expand_dims(data[(val_idxs - 1), -1, ...], axis=1)
+    initial_states_test = jnp.expand_dims(data[(test_idxs - 1), -1, ...], axis=1)
+
+    tr_data = cut_remainder(data[tr_idxs], batch_size)
+    val_data = cut_remainder(jnp.concatenate([initial_states_val, data[val_idxs]], axis=1), batch_size)
+    test_data = cut_remainder(jnp.concatenate([initial_states_test, data[test_idxs]], axis=1), batch_size)
+    return tr_data, val_data, test_data
+
+
+def filter_data_with_mechanism_for_including_first_data_point(data, idxs, batch_size):
+    tr_idxs, val_idxs, test_idxs = idxs
+
+    val_idxs = jnp.delete(val_idxs, jnp.where(val_idxs==0)[0])  # remove if first one! 
+    test_idxs = jnp.delete(test_idxs, jnp.where(test_idxs==0)[0])  # remove if first one! 
+    initial_states_val = jnp.expand_dims(data[(val_idxs - 1), -1, ...], axis=1)
+    initial_states_test = jnp.expand_dims(data[(test_idxs - 1), -1, ...], axis=1)
+
+    tr_data = cut_remainder(data[tr_idxs], batch_size)
+    val_data = cut_remainder(jnp.concatenate([initial_states_val, data[val_idxs]], axis=1), batch_size)
+    test_data = cut_remainder(jnp.concatenate([initial_states_test, data[test_idxs]], axis=1), batch_size)
+    return tr_data, val_data, test_data
+
+
+
+def filter_data(data, idxs, batch_size):
+    tr_idxs, val_idxs, test_idxs = idxs
+
+    tr_data = cut_remainder(data[tr_idxs], batch_size)
+    val_data = cut_remainder(data[val_idxs], batch_size)
+    test_data = cut_remainder(data[test_idxs], batch_size)
+
+    return tr_data, val_data, test_data
+
+
+def split_into_timesteps(data, n_timesteps):
+    data = cut_remainder(data, n_timesteps)
+    n_trajectories = data.shape[0]//n_timesteps
+    data = data.reshape(n_trajectories, n_timesteps, *data.shape[1:])
+    return data
+
+
+def prep_neval_eq_ntr(cfg, split, data, target):
+    data = split_into_timesteps(data, cfg.n_timesteps)
+    target = split_into_timesteps(target, cfg.n_timesteps)
+    n_trajectories = len(data)
+
+    n_train, n_val, n_test = (
+        int(n_trajectories * split[0]),
+        int(n_trajectories * split[1]),
+        int(n_trajectories * split[2])
+    )
+
+    key = rnd.PRNGKey(cfg.seed)
+    idxs = rnd.permutation(key, jnp.arange(0, n_trajectories))
+    tr_idxs, val_idxs, test_idxs = idxs[:n_train], idxs[n_train:(n_val+n_train)], idxs[-n_test:]
+
+    val_idxs = jnp.delete(val_idxs, jnp.where(val_idxs==0)[0])  # remove if first one! 
+    test_idxs = jnp.delete(test_idxs, jnp.where(test_idxs==0)[0])  # remove if first one! 
+    initial_states_val_data = data[(val_idxs - 1), -cfg.n_eval_warmup:, ...]
+    initial_states_test_data = data[(test_idxs - 1), -cfg.n_eval_warmup:, ...]
+    initial_states_val_target = target[(val_idxs - 1), -cfg.n_eval_warmup:, ...]
+    initial_states_test_target = target[(test_idxs - 1), -cfg.n_eval_warmup:, ...]
+
+    tr_data = cut_remainder(data[tr_idxs], cfg.batch_size)
+    val_data = cut_remainder(jnp.concatenate([initial_states_val_data, data[val_idxs]], axis=1), cfg.batch_size)
+    test_data = cut_remainder(jnp.concatenate([initial_states_test_data, data[test_idxs]], axis=1), cfg.batch_size)
+
+    tr_target = cut_remainder(target[tr_idxs], cfg.batch_size)
+    val_target = cut_remainder(jnp.concatenate([initial_states_val_target, target[val_idxs]], axis=1), cfg.batch_size)
+    test_target = cut_remainder(jnp.concatenate([initial_states_test_target, target[test_idxs]], axis=1), cfg.batch_size)
+
+    print(f'Datasets length: Train {len(tr_data)} Val {len(val_data)} Test {len(test_data)}')
+    print(f'Some idxs:  \n Train {tr_idxs[:5]} \n Val {val_idxs[:5]}')
+
+    return (tr_data, tr_target), (val_data, val_target), (test_data, test_target)
+
+
+def prep_dataloaders(cfg, data, target, split=(0.7, 0.15, 0.15)):
     n_data = len(data)
 
     n_train, n_val, n_test = (
@@ -60,33 +135,37 @@ def prep_dataloaders(cfg, data, split=(0.7, 0.15, 0.15)):
 
     # split into timesteps
     if cfg.n_timesteps:
-        data = cut_remainder(data, cfg.n_timesteps)
-        n_trajectories = data.shape[0]//cfg.n_timesteps
-        data = data.reshape(n_trajectories, cfg.n_timesteps, data.shape[-1])
+        # max_timestep = max(cfg.n_timesteps, cfg.n_eval_timesteps+cfg.n_eval_warmup)
 
-        n_train, n_val, n_test = (
-            int(n_trajectories * split[0]),
-            int(n_trajectories * split[1]),
-            int(n_trajectories * split[2])
-        )
+        # key = rnd.PRNGKey(cfg.seed)
+        # idxs = rnd.permutation(key, jnp.arange(0, n_data))
+        # all_idxs = idxs[:n_train], idxs[n_train:(n_val+n_train)], idxs[-n_test:]
+        # tr_data, val_data, test_data = filter_data(data, all_idxs, cfg.batch_size)
+        # tr_target, val_target, test_target = filter_data(target, all_idxs, cfg.batch_size)
 
-        key = rnd.PRNGKey(cfg.seed)
-        idxs = rnd.permutation(key, jnp.arange(0, n_trajectories))
+        # tr_data = split_into_timesteps(tr_data, cfg.n_timesteps)
+        # tr_target = split_into_timesteps(tr_target, cfg.n_timesteps)
+
+        # n_eval = cfg.n_eval_timesteps + cfg.n_eval_warmup
+        # val_data = split_into_timesteps(val_data, n_eval)
+        # val_data = split_into_timesteps(val_data, n_eval)
+
+        # test_data = split_into_timesteps(test_data, n_eval)
+        # test_target = split_into_timesteps(test_target, n_eval)
+
+        tr, val, test = prep_neval_eq_ntr(cfg, split, data, target)
+
+        
+    
+
+        
         # tr_slice, val_slice, test_slice = slice(0, n_train), slice(n_train, n_train+n_val), slice(n_train+n_val, n_train+n_val+n_test)
         # tr_idxs, val_idxs, test_idxs = idxs[tr_slice], idxs[val_slice], idxs[test_slice]
-        tr_idxs, val_idxs, test_idxs = idxs[:n_train], idxs[n_train:(n_val+n_train)], idxs[-n_test:]
+        # all_idxs = idxs[:n_train], idxs[n_train:(n_val+n_train)], idxs[-n_test:]
         
-        val_idxs = jnp.delete(val_idxs, jnp.where(val_idxs==0)[0])  # remove if first one! 
-        test_idxs = jnp.delete(test_idxs, jnp.where(test_idxs==0)[0])  # remove if first one! 
-        initial_states_val = jnp.expand_dims(data[(val_idxs - 1), -1, ...], axis=1)
-        initial_states_test = jnp.expand_dims(data[(test_idxs - 1), -1, ...], axis=1)
+        
 
-        tr_data = cut_remainder(data[tr_idxs], cfg.batch_size)
-        val_data = cut_remainder(jnp.concatenate([initial_states_val, data[val_idxs]], axis=1), cfg.batch_size)
-        test_data = cut_remainder(jnp.concatenate([initial_states_test, data[test_idxs]], axis=1), cfg.batch_size)
-
-        print(f'Datasets length: Train {len(tr_data)} Val {len(val_data)} Test {len(test_data)}')
-        print(f'Some idxs:  \n Train {tr_idxs[:5]} \n Val {val_idxs[:5]}')
+        
     else:
 
         key = rnd.PRNGKey(cfg.seed)
@@ -94,9 +173,9 @@ def prep_dataloaders(cfg, data, split=(0.7, 0.15, 0.15)):
         data = data[:-divmod(data.shape[0], cfg.batch_size)[1]] # remove not full batch
         tr_data, val_data, test_data = data[:n_train], data[n_train:(n_train+n_val)], data[-n_test:]
 
-    train_loader = DataLoader(cfg, tr_data)
-    val_loader = DataLoader(cfg, val_data)
-    test_loader = DataLoader(cfg, test_data)
+    train_loader = DataLoader(cfg, *tr)
+    val_loader = DataLoader(cfg, *val, eval=True)
+    test_loader = DataLoader(cfg, *test, eval=True)
 
     return train_loader, val_loader, test_loader
 
@@ -106,7 +185,9 @@ class DataLoader:
     def __init__(self, 
         cfg: Config,
         data: jnp.array,
-        shuffle: bool=True
+        target: jnp.array,
+        shuffle: bool=True, 
+        eval: bool=False
     ):
         """Naive dataloader implementation with support for 
         - shuffeling with explicit key, 
@@ -126,10 +207,11 @@ class DataLoader:
         self.batch_size = cfg.batch_size
         self.seed = cfg.seed
         self.n_timesteps = cfg.n_timesteps
-        self.n_timesteps_eval = cfg.n_timesteps_eval
+        self.n_eval_timesteps = cfg.n_eval_timesteps
+        self.eval = eval
         
         self.data = data
-        self.target = data[..., :-cfg.n_atoms]
+        self.target = target
         
         self._shuffle = shuffle
         self._order = jnp.arange(0, data.shape[0])
@@ -168,6 +250,11 @@ class DataLoader:
         if i < len(self):
             batch = self.data[(self._order[start:stop],)]
             target = self.target[(self._order[start:stop],)]
+            if self.eval:
+                batch_warmup, batch_eval = jnp.split(batch, [batch.shape[1]-self.n_eval_timesteps,], axis=1)
+                target_warmup, target_eval = jnp.split(target, [target.shape[1]-self.n_eval_timesteps,], axis=1)
+                self._exhausted_batches += 1
+                return ((batch_warmup, target_warmup), (batch_eval, target_eval))
             self._exhausted_batches += 1
             return batch, target
         else:
