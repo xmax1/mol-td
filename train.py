@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--wb', action='store_true')
 parser.add_argument('-i', '--id', default='', type=str)
 parser.add_argument('-p', '--project', default='TimeDynamics', type=str)
-parser.add_argument('-g', '--group', default='4_18_22', type=str)
+parser.add_argument('-g', '--group', default='4_20_22', type=str)
 parser.add_argument('-tag', '--tag', default='no_tag', type=str)
 parser.add_argument('--xlog_media', action='store_true')
 
@@ -38,16 +38,16 @@ parser.add_argument('-new', '--n_eval_warmup', default=None, type=int)
 parser.add_argument('-nenc', '--n_enc_layers', default=2, type=int)
 parser.add_argument('-ndec', '--n_dec_layers', default=2, type=int)
 parser.add_argument('-tl', '--n_transfer_layers', default=2, type=int)
-parser.add_argument('-ne', '--n_embed', default=20, type=int)
+parser.add_argument('-ne', '--n_embed', default=40, type=int)
 parser.add_argument('-nl', '--n_latent', default=2, type=int)
-parser.add_argument('-ystd', '--y_std', default=1., type=float)
-parser.add_argument('-b', '--beta', default=10., type=float)
+parser.add_argument('-ystd', '--y_std', default=0.1, type=float)
+parser.add_argument('-b', '--beta', default=1., type=float)
 parser.add_argument('--skip_connections', action='store_true')
 parser.add_argument('--likelihood_prior', action='store_true')
 
-parser.add_argument('-e', '--n_epochs', default=50, type=int)
+parser.add_argument('-e', '--n_epochs', default=10, type=int)
 parser.add_argument('-bs', '--batch_size', default=64, type=int)
-parser.add_argument('-lr', '--lr', default=0.001, type=float)
+parser.add_argument('-lr', '--lr', default=0.0003, type=float)
 
 args = parser.parse_args()
 
@@ -81,6 +81,12 @@ def train_step(params, batch, opt_state, rng):
     model_fwd = partial(model.apply, training=True, rngs=dict(sample=sample_rng, dropout=dropout_rng))
     loss_grad_fn = jax.value_and_grad(model_fwd, has_aux=True)
     (loss, signal), grads = loss_grad_fn(params, batch)
+    grad_norm = jnp.linalg.norm(jax.tree_leaves(jax.tree_map(jnp.linalg.norm, grads)))
+    if cfg.clip_grad_norm_by:
+        # Clipping gradients by global norm
+        scale = jnp.minimum(cfg.clip_grad_norm_by / grad_norm, 1)
+        grads = jax.tree_map(lambda x: scale * x, grads)
+
     updates, opt_state = tx.update(grads, opt_state)
     params = optax.apply_updates(params, updates)
     return loss, signal, params, opt_state, rng
@@ -90,8 +96,11 @@ def train_step(params, batch, opt_state, rng):
 def validation_step(params, val_batch, rng):
     warm_up_batch, eval_batch = val_batch
     rng, sample_rng, dropout_rng = rnd.split(rng, 3)
-    val_fwd = partial(model.apply, training=False, rngs=dict(sample=sample_rng, dropout=dropout_rng))
+    val_fwd = partial(model.apply, training=True, rngs=dict(sample=sample_rng, dropout=dropout_rng))
     val_loss_batch, val_signal = val_fwd(params, warm_up_batch)
+
+    rng, sample_rng, dropout_rng = rnd.split(rng, 3)
+    val_fwd = partial(model.apply, training=False, rngs=dict(sample=sample_rng, dropout=dropout_rng))
     val_loss_batch, val_signal = val_fwd(params, eval_batch, latent_states=val_signal['latent_states'])
     return val_loss_batch, val_signal, rng
 

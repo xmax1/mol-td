@@ -35,6 +35,7 @@ class HierarchicalTDVAE(nn.Module):
         self.decoder = decoders[self.cfg.decoder](self.cfg)
         self.transfer = MLPTransfer(self.cfg)
         self.ladder = [nn.Dense(self.cfg.n_embed) for i in range(self.cfg.n_latent)]
+        self.dropout = nn.Dropout(rate=self.cfg.dropout)
 
     def __call__(self, data: Tuple, latent_states: list=None, training: bool=False, sketch: bool=False):
         data, data_target = data
@@ -46,40 +47,49 @@ class HierarchicalTDVAE(nn.Module):
         embeddings = []
         for latent_idx, ladder in enumerate(self.ladder):
             embedding_tmp = activations[self.cfg.latent_activation](ladder(embedding))
-            embedding = embedding_tmp if not self.cfg.skip_connections else embedding_tmp + embedding
+            # embedding = embedding_tmp if not self.cfg.skip_connections else embedding_tmp + embedding
+            embedding = embedding_tmp + embedding
             embeddings.insert(0, embedding)
 
-        scan = nn.scan(lambda f, state, inputs: f(state, inputs, training=training),
-                       variable_broadcast='params',
-                       split_rngs=dict(params=False, sample=True, dropout=True),
-                       in_axes=1, out_axes=1)
 
         jumps = [2**i for i in range(self.cfg.n_latent-1, -1, -1)]
+        print(jumps)
 
         priors = []
         posteriors = [] 
         next_latent_states = {}              
         for latent_idx, (embedding, jump) in enumerate(zip(embeddings, jumps)):  # deeper latent space longer embeddeding function
-            
+            print('jump', jump)
             if not jump == 1:
-                embedding = jnp.split(embedding, embedding.shape[1], axis=1)
-                embedding = jnp.concatenate([e for i, e in enumerate(embedding) if i % jump == 0], axis=1)
-                nt = embedding.shape[1]
+                embedding = jnp.split(embedding, embedding.shape[1]//jump, axis=1)
+                # embedding = jnp.concatenate([e for i, e in enumerate(embedding) if i % jump == 0], axis=1)
+                embedding = jnp.concatenate([jnp.mean(e, axis=1, keepdims=True) for e in embedding], axis=1)
+                embedding = self.dropout(embedding, deterministic=not training)
+            
+            nt = embedding.shape[1]
+            
+            print('nt', nt)
+            scan = nn.scan(lambda f, state, inputs: f(state, inputs, training=training),
+                       variable_broadcast='params',
+                       split_rngs=dict(params=False, sample=True, dropout=True),
+                       in_axes=1, out_axes=1,
+                       length=nt)
 
             if latent_states is None:
-                latent_state = self.transfer.zero_state((n_data,))  # needs prior z, posterior z, h_prior (if cell)
+                latent_state = self.transfer.zero_state((n_data,))  # needs z and carry
             else:
                 latent_state = latent_states[f'l{latent_idx}']
 
             if latent_idx == 0:
                 zero_state_over_time = self.transfer.zero_state((n_data, nt))
-                context = {k: jnp.zeros_like(v) for k, v in zero_state_over_time.items() if not isinstance(v, tuple)}
-            
+                # context = {k: jnp.zeros_like(v) for k, v in zero_state_over_time.items() if not isinstance(v, tuple)}
+                context = jnp.concatenate([zero_state_over_time['z'], zero_state_over_time['z']], axis=-1)
+
+            print(embedding.shape, context.shape, latent_state['z'].shape, latent_state['carry'].shape)
             latent_state, (prior, posterior) = scan(self.transfer, latent_state, (embedding, context))
 
-            context = dict(z_prior=quad_scale_time(prior['z']),
-                           z_posterior=quad_scale_time(posterior['z'])
-            )
+            context = posterior['context']
+            context = jnp.concatenate([jnp.repeat(x, 2, axis=1) for x in jnp.split(context, nt, axis=1)], axis=1)
 
             priors.append(prior)
             posteriors.append(posterior)
@@ -89,7 +99,9 @@ class HierarchicalTDVAE(nn.Module):
             prior_tmp['dist'] = tfd.Normal(prior_tmp['mean'], prior_tmp['std'])
             posterior_tmp['dist'] = tfd.Normal(posterior_tmp['mean'], posterior_tmp['std'])
         
-        y = self.decoder(posterior['z'], training=training)  # when not training, posterior = prior
+
+        z = posterior['z'] #if training else posterior['mean']
+        y = self.decoder(z, training=training)  # when not training, posterior = prior
         if sketch: print('y shape: ', y.shape)
         
         likelihood = tfd.Normal(y, self.cfg.y_std)

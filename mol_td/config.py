@@ -87,6 +87,7 @@ class Config:
     n_eval_timesteps:   int = 3
     n_eval_warmup:      int = None
     xlog_media:         bool = False
+    clip_grad_norm_by:  float = 10000
 
     # PATHS
     root:           str = '/home/amawi/projects/mol-td'

@@ -29,7 +29,7 @@ class MLPEncoder(nn.Module):
         for n_hidden in self.cfg.enc_hidden: # the first contains the feature dimension
             x = nn.Dense(n_hidden)(x)
             x = activations[self.cfg.map_activation](x)
-            x = nn.Dropout(rate=self.cfg.dropout)(x, deterministic=not training)
+            x = nn.Dropout(rate=self.cfg.dropout)(x, deterministic=not training)  # https://github.com/google/flax/issues/1004
             # x = nn.Dropout(rate=self.cfg.dropout, broadcast_dims=(0,))(x, deterministic=eval)  # rate is the dropout probability not the keep rate
         return x
 
@@ -42,8 +42,8 @@ class MLPDecoder(nn.Module):
     def __call__(self, z, training=False):
         bs, nt = z.shape[:2]
         for n_hidden in self.cfg.dec_hidden: # the first contains the feature dimension
-            z = nn.Dropout(rate=self.cfg.dropout)(z, deterministic=not training)
             z = activations[self.cfg.map_activation](nn.Dense(n_hidden)(z))
+            z = nn.Dropout(rate=self.cfg.dropout)(z, deterministic=not training)  # https://github.com/google/flax/issues/1004
         z = jnp.tanh(nn.Dense(self.cfg.dec_hidden[-1])(z))  # values in dataset restricted between 1 and -1
         z = z.reshape((bs, nt, self.cfg.n_atoms, 3))
         return z
@@ -58,7 +58,7 @@ class GNNEncoder(nn.Module):
     # adj: d * adj * d
 
     @nn.compact
-    def __call__(self, x, eval=False):
+    def __call__(self, x, training=False):
         bs, nt, n_atoms, nf = x.shape
         print('GCN input: ', x.shape)
 
@@ -70,7 +70,7 @@ class GNNEncoder(nn.Module):
             neighbours = jnp.transpose(jnp.dot(adj, nn.Dense(x.shape[-1])(x)), (1, 2, 0, 3))
             x = (neighbours + nn.Dense(x.shape[-1])(x)) / 2. # dot is the sum product over axes -1 and -2 respectively
             x = activations[self.cfg.map_activation](x)
-            # x = nn.Dropout(rate=self.cfg.dropout, broadcast_dims=(0,))(x, deterministic=eval)  # rate is the dropout probability not the keep rate
+            # x = nn.Dropout(rate=self.cfg.dropout)(x, deterministic=training)  # rate is the dropout probability not the keep rate
             print(f'GCN layer_{i}:', x.shape)
         
         x = MLPEncoder(self.cfg)(x)
