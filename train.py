@@ -1,5 +1,6 @@
 
 from types import NoneType
+from mol_td.signal_utils import compute_rdfs, compute_rdfs_all_unique_bonds
 from mol_td.utils import log_wandb_videos_or_images, save_pk, input_bool
 from mol_td.data_fns import prep_dataloaders
 from mol_td import models
@@ -128,6 +129,12 @@ def filter_scalars(signal, n_batch=1., tag='', ignore=()):
 
 
 with run:
+    rbfs = compute_rdfs(cfg.atoms, data[..., :3], mode='all_unique_bonds')
+    for k, v in rbfs.items():
+        table = wandb.Table(data=v, columns = ["x", "y"])
+        name = f'tr_rbf_{k}'
+        wandb.log({name : wandb.plot.line(table, "x", "y", title=name)})
+
     for epoch in range(cfg.n_epochs):
         
         for batch_idx, batch in enumerate(tqdm(train_loader)):
@@ -161,5 +168,17 @@ with run:
                           'tr_posterior_y': tr_signal['y_r']}
         
             log_wandb_videos_or_images(media_logs, cfg, n_batch=1)
+
+            val_rbfs = compute_rdfs(cfg.atoms, jnp.concatenate(signals['y'], axis=0).reshape(-1, cfg.n_atoms, 3), mode='all_unique_bonds')
+            for k, v in val_rbfs.items():
+                table = wandb.Table(data=v, columns = ["x", "y"])
+                name = f'val_rbf_{k}'
+                wandb.log({name : wandb.plot.line(table, "x", "y", title=name)})
+
+            for k, v in val_rbfs.items():
+                difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
+                wandb.log({f'rbf_{k}_l1norm': difference})
+
+
 
         

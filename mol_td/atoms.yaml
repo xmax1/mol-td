@@ -1,0 +1,73 @@
+# atom_name:
+#   atomic_number:
+#   other:
+
+H:
+  atomic_number: 1
+  other: 0
+
+He:
+  atomic_number: 2
+  other: 0
+
+Li:
+  atomic_number: 3
+  other: 0
+
+Be:
+  atomic_number: 4
+  other: 0
+
+B:
+  atomic_number: 5
+  other: 0
+
+C:
+  atomic_number: 6
+  other: 0
+  
+N:
+  atomic_number: 7
+  other: 0
+
+O:
+  atomic_number: 8
+  other: 0
+
+Ne:
+  atomic_number: 9
+  other: 0
+
+Na:
+  atomic_number: 10
+  other: 0
+
+Mg:
+  atomic_number: 11
+  other: 0
+
+Al:
+  atomic_number: 12
+  other: 0
+
+Si:
+  atomic_number: 13
+  other: 0
+
+P:
+  atomic_number: 14
+  other: 0
+
+S:
+  atomic_number: 15
+  other: 0
+
+Cl:
+  atomic_number: 16
+  other: 0
+
+Ar:
+  atomic_number: 17
+  other: 0
+
+  

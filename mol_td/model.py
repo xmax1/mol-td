@@ -139,7 +139,7 @@ class HierarchicalTDVAE(nn.Module):
         y_mean_r = jnp.mean(y_mean_r_over_time, axis=0)
 
         directional_accuracy, step_size_accuracy = compute_da(data_target, y)
-        y_std = jnp.mean(jnp.std(y, axis=0), axis=0)
+        y_std = jnp.mean(jnp.std(y, axis=0))
 
         signal = dict(posterior_std=posterior['std'].mean(),
                       loss=loss,
