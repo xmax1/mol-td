@@ -129,12 +129,10 @@ def filter_scalars(signal, n_batch=1., tag='', ignore=()):
 
 with run:
     for epoch in range(cfg.n_epochs):
+        
         for batch_idx, batch in enumerate(tqdm(train_loader)):
-
-            loss, tr_signal, params, opt_state, rng = train_step(params, batch, opt_state, rng)
-            
+            loss, tr_signal, params, opt_state, rng = train_step(params, batch, opt_state, rng)    
             wandb.log(filter_scalars(tr_signal, tag='tr_'))
-
         train_loader.shuffle()
 
         if val_loader is not None:
@@ -142,11 +140,8 @@ with run:
             signals = {}
             for val_batch in val_loader:
                 val_loss_batch, val_signal, rng = validation_step(params, val_batch, rng)
-
                 signals = accumulate_signals(signals, val_signal)
-
             val_loader.shuffle()
-
             signal = filter_scalars(signals, n_batch=len(val_loader), tag='val_')
 
             wandb.log(signal)

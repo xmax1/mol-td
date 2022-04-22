@@ -31,12 +31,12 @@ nes=('-ne 20', '-ne 40')
 nls=('-nl 1', '-nl 2', '-nl 3')
 cws=('-cw True', '-cw False')
 mjs=('-mj True', )
-y_stds=('-y_std 0.005', '-y_std 0.01', '-y_std 0.05', '-y_std 0.1')
+ystds=('-ystd 0.005', '-ystd 0.01', '-ystd 0.05', '-ystd 0.1')
 bss=('-bs 128', )
 tag=('-tag no_tag', )
 other=('--wb -p TimeDynamics -g mvp', )
 
-list = [ts, els, nes, nls, y_stds, bss, cws, tag, other]
+list = [ts, els, nes, nls, mjs, ystds, bss, cws, tag, other]
 cmds = [p for p in itertools.product(*list)]
 cmds = [" ".join(l) for l in cmds]
 
