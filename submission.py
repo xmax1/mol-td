@@ -2,25 +2,40 @@ import re
 import os
 import itertools
 
-ts=('-t GRU', )
-nts=('-nt 5', )
-els=('-el 1 -dl 1', )
-# dls=(x.replace('e', 'd') for x in els)
-tls=('-tl 1', )
-nes=('-ne 30', )
-nls=('-nl 1', '-nl 2', '-nl 3')
-y_stds=('-y_std 0.01', '-y_std 0.05', '-y_std 0.1', '-y_std 0.5', '-y_std 1.')
-betas=('-b 1','-b 10','-b 100', '-b 1000')
-post_into_prior=('--post_into_prior', '')
-scs=('', )
-lps=('--likelihood_prior', '')
-bss=('-bs 128',)
-lrs=('-lr 0.001', )
-es=('-e 10', )
-tag=('-tag no_tag', )
-other=('--wb -p TimeDynamics -g initial_sweep4', )
+# parser.add_argument('-m', '--model', default='HierarchicalTDVAE', type=str)
+# parser.add_argument('-t', '--transfer_fn', default='GRU', type=str)
+# parser.add_argument('-enc', '--encoder', default='GNN', type=str)  # GCN for graph, MLP for line
+# parser.add_argument('-dec', '--decoder', default='MLP', type=str)  # GCN for graph, MLP for line
+# parser.add_argument('-nt', '--n_timesteps', default=8, type=int)
+# parser.add_argument('-net', '--n_eval_timesteps', default=8, type=int)
+# parser.add_argument('-new', '--n_eval_warmup', default=None, type=int)
 
-list = [ts, nts, els, tls, nes, nls, y_stds, betas, post_into_prior, scs, bss, lrs, es, tag, other]
+# parser.add_argument('-nenc', '--n_enc_layers', default=2, type=int)
+# parser.add_argument('-ndec', '--n_dec_layers', default=2, type=int)
+# parser.add_argument('-tl', '--n_transfer_layers', default=2, type=int)
+# parser.add_argument('-ne', '--n_embed', default=40, type=int)
+# parser.add_argument('-nl', '--n_latent', default=2, type=int)
+# parser.add_argument('-ystd', '--y_std', default=0.01, type=float)
+# parser.add_argument('-b', '--beta', default=1., type=float)
+# parser.add_argument('-lp', '--likelihood_prior', default=False, type=input_bool)
+# parser.add_argument('-cw', '--clockwork', default=False, type=input_bool)
+# parser.add_argument('-mj', '--mean_trajectory', default=False, type=input_bool)
+
+# parser.add_argument('-e', '--n_epochs', default=50, type=int)
+# parser.add_argument('-bs', '--batch_size', default=128, type=int)
+# parser.add_argument('-lr', '--lr', default=0.001, type=float)
+
+ts=('-t GRU', '-t LSTM')
+els=('-nenc 1 -ndec 1', '-nenc 2 -ndec 2', '-nenc 3 -ndec 3')
+nes=('-ne 20', '-ne 40')
+nls=('-nl 1', '-nl 2', '-nl 3')
+cws=('-cw True', '-cw False')
+y_stds=('-y_std 0.005', '-y_std 0.01', '-y_std 0.05', '-y_std 0.1')
+bss=('-bs 128', )
+tag=('-tag no_tag', )
+other=('--wb -p TimeDynamics -g mvp', )
+
+list = [ts, els, nes, nls, y_stds, bss, cws, tag, other]
 cmds = [p for p in itertools.product(*list)]
 cmds = [" ".join(l) for l in cmds]
 

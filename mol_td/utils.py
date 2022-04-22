@@ -9,6 +9,13 @@ import matplotlib.image as img
 from matplotlib.cm import get_cmap
 
 
+from distutils.util import strtobool
+
+def input_bool(x):
+    x = strtobool(x)
+    if x: return True
+    else: return False
+
 def get_sizes(data, zlim, new_min=2, new_max=200):
     data_min, data_max = zlim
     sizes = ((data - data_min) / (data_max - data_min)) * (new_max - new_min) + new_min

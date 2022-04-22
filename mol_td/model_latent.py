@@ -41,7 +41,6 @@ def reparametrisation(mean, std):
     return z_t1
     
 
-
 class MLPPosterior(nn.Module):
 
     cfg: Config
@@ -59,11 +58,6 @@ class MLPPosterior(nn.Module):
                     mean=mean,
                     std=std,
                     context=jnp.concatenate([prior['cell_out'], z_t1], axis=-1))
-
-
-cells = {'LSTM': nn.LSTMCell,
-         'GRU': nn.GRUCell
-}
 
 
 class Distribution(nn.Module):
@@ -86,6 +80,9 @@ class Distribution(nn.Module):
                     z=z_t1,
         )
 
+cells = {'GRU': nn.GRUCell(), 
+         'LSTM': nn.LSTMCell()
+}
 
 class MLPTransfer(nn.Module):
     
@@ -93,9 +90,12 @@ class MLPTransfer(nn.Module):
 
     def setup(self):
 
-        self.transfer = cells[self.cfg.transfer_fn](self.cfg)
         self.posterior = Distribution(self.cfg)
         self.prior = Distribution(self.cfg)
+
+        # both gru outputs are the same https://blog.floydhub.com/gru-with-pytorch/
+        self.cell = cells[self.cfg.transfer_fn]
+        self.dense = nn.Dense(self.cfg.n_embed)
 
     def zero_state(self, leading_dims):
         mean=jnp.zeros(leading_dims+(self.cfg.n_embed,))
@@ -118,46 +118,39 @@ class MLPTransfer(nn.Module):
 
         return state
 
-    @nn.compact
-    def __call__(self, prev_state, inputs, training):
+    def __call__(self, 
+                 prev_state, 
+                 inputs, 
+                 use_obs: bool = False, 
+                 mean_trajectory: bool = False):
+
         embedding, context = inputs
 
-        print('latent')
-        print(embedding.shape, context.shape, prev_state['z'].shape, prev_state['carry'].shape)
-        
         if self.cfg.n_latent > 1:
             s_t0 = jnp.concatenate([prev_state['z'], context], axis=-1)
         else:
             s_t0 = prev_state['z']
         
-        s_t0 = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(s_t0))
+        s_t0 = activations[self.cfg.latent_activation](self.dense(s_t0))
         
-        if self.cfg.transfer_fn == 'GRU':
-            carry, cell_out = nn.GRUCell()(prev_state['carry'], s_t0)  # both gru outputs are the same https://blog.floydhub.com/gru-with-pytorch/
-        elif self.cfg.transfer_fn == 'LSTM':
-            carry, cell_out = nn.LSTMCell()(prev_state['carry'], s_t0)
+        carry, cell_out = self.cell(prev_state['carry'], s_t0)
         
-        # s_t0 = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(s_t0))
-
         prior = self.prior(cell_out)
 
         s_posterior_t0 = jnp.concatenate([cell_out, embedding], axis=-1)
 
-        # s_posterior_t0 = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(s_posterior_t0))
-        # s_posterior_t0 = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(s_posterior_t0))
-        
-        posterior = self.posterior(s_posterior_t0) if training else prior
+        posterior = self.posterior(s_posterior_t0) if use_obs else prior
 
         posterior['context'] = jnp.concatenate([posterior['z'], cell_out], axis=-1)
         
+        if mean_trajectory: 
+            posterior['z'] = posterior['mean']
+
         next_state = dict(z=posterior['z'],
                           carry=carry,
         )
         
         return next_state, (prior, posterior)
-
-import flax.linen.initializers
-import flax.linen
 
 
 

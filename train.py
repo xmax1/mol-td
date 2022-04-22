@@ -1,6 +1,6 @@
 
 from types import NoneType
-from mol_td.utils import log_wandb_videos_or_images, save_pk
+from mol_td.utils import log_wandb_videos_or_images, save_pk, input_bool
 from mol_td.data_fns import prep_dataloaders
 from mol_td import models
 from mol_td.config import Config
@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--wb', action='store_true')
 parser.add_argument('-i', '--id', default='', type=str)
 parser.add_argument('-p', '--project', default='TimeDynamics', type=str)
-parser.add_argument('-g', '--group', default='4_20_22', type=str)
+parser.add_argument('-g', '--group', default='junk', type=str)
 parser.add_argument('-tag', '--tag', default='no_tag', type=str)
 parser.add_argument('--xlog_media', action='store_true')
 
@@ -40,14 +40,15 @@ parser.add_argument('-ndec', '--n_dec_layers', default=2, type=int)
 parser.add_argument('-tl', '--n_transfer_layers', default=2, type=int)
 parser.add_argument('-ne', '--n_embed', default=40, type=int)
 parser.add_argument('-nl', '--n_latent', default=2, type=int)
-parser.add_argument('-ystd', '--y_std', default=0.1, type=float)
+parser.add_argument('-ystd', '--y_std', default=0.01, type=float)
 parser.add_argument('-b', '--beta', default=1., type=float)
-parser.add_argument('--skip_connections', action='store_true')
-parser.add_argument('--likelihood_prior', action='store_true')
+parser.add_argument('-lp', '--likelihood_prior', default=False, type=input_bool)
+parser.add_argument('-cw', '--clockwork', default=False, type=input_bool)
+parser.add_argument('-mj', '--mean_trajectory', default=False, type=input_bool)
 
-parser.add_argument('-e', '--n_epochs', default=10, type=int)
-parser.add_argument('-bs', '--batch_size', default=64, type=int)
-parser.add_argument('-lr', '--lr', default=0.0003, type=float)
+parser.add_argument('-e', '--n_epochs', default=50, type=int)
+parser.add_argument('-bs', '--batch_size', default=128, type=int)
+parser.add_argument('-lr', '--lr', default=0.001, type=float)
 
 args = parser.parse_args()
 
@@ -96,11 +97,11 @@ def train_step(params, batch, opt_state, rng):
 def validation_step(params, val_batch, rng):
     warm_up_batch, eval_batch = val_batch
     rng, sample_rng, dropout_rng = rnd.split(rng, 3)
-    val_fwd = partial(model.apply, training=True, rngs=dict(sample=sample_rng, dropout=dropout_rng))
+    val_fwd = partial(model.apply, training=False, mean_trajectory=cfg.mean_trajectory, rngs=dict(sample=sample_rng, dropout=dropout_rng))
     val_loss_batch, val_signal = val_fwd(params, warm_up_batch)
 
     rng, sample_rng, dropout_rng = rnd.split(rng, 3)
-    val_fwd = partial(model.apply, training=False, rngs=dict(sample=sample_rng, dropout=dropout_rng))
+    val_fwd = partial(model.apply, training=False, use_obs=False, mean_trajectory=cfg.mean_trajectory, rngs=dict(sample=sample_rng, dropout=dropout_rng))
     val_loss_batch, val_signal = val_fwd(params, eval_batch, latent_states=val_signal['latent_states'])
     return val_loss_batch, val_signal, rng
 

@@ -27,8 +27,7 @@ class MLPEncoder(nn.Module):
         x = x.reshape((bs, nt, n_atom * nf))
 
         for n_hidden in self.cfg.enc_hidden: # the first contains the feature dimension
-            x = nn.Dense(n_hidden)(x)
-            x = activations[self.cfg.map_activation](x)
+            x = activations[self.cfg.map_activation](nn.Dense(n_hidden)(x))
             x = nn.Dropout(rate=self.cfg.dropout)(x, deterministic=not training)  # https://github.com/google/flax/issues/1004
             # x = nn.Dropout(rate=self.cfg.dropout, broadcast_dims=(0,))(x, deterministic=eval)  # rate is the dropout probability not the keep rate
         return x
@@ -74,11 +73,6 @@ class GNNEncoder(nn.Module):
             print(f'GCN layer_{i}:', x.shape)
         
         x = MLPEncoder(self.cfg)(x)
-        # flatten
-        # n_hidden = n_atoms * x.shape[-1]
-        # x = x.reshape(bs, nt, n_hidden)
-        # x = nn.Dense(self.cfg.n_embed)(x)
-        # x = activations[self.cfg.map_activation](x)
         print('GCN output: ', x.shape)
         return x
 

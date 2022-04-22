@@ -24,6 +24,16 @@ def mean_r(x, y, axis=0):
     return jnp.mean(jnp.sum((x-y)**2, axis=-1)**0.5, axis=axis)
 
 
+def compute_da(data, y):
+    data0, data1 = data[:-1], data[1:]
+    datar = data1 - data0
+    datar = datar / jnp.linalg.norm(datar, axis=-1, keepdims=True)
+    y0, y1 = y[:-1], y[1:]
+    yr = y1 - y0
+    yr = yr / jnp.linalg.norm(yr, axis=-1, keepdims=True)
+    return jnp.mean(jnp.sum(yr*datar, axis=-1))
+
+
 
 class HierarchicalTDVAE(nn.Module):
 
@@ -35,41 +45,48 @@ class HierarchicalTDVAE(nn.Module):
         self.decoder = decoders[self.cfg.decoder](self.cfg)
         self.transfer = MLPTransfer(self.cfg)
         self.ladder = [nn.Dense(self.cfg.n_embed) for i in range(self.cfg.n_latent)]
-        self.dropout = nn.Dropout(rate=self.cfg.dropout)
+        self.dropout = [nn.Dropout(rate=self.cfg.dropout) for i in range(self.cfg.n_latent)]
 
-    def __call__(self, data: Tuple, latent_states: list=None, training: bool=False, sketch: bool=False):
+    def __call__(self, 
+                 data: Tuple, 
+                 latent_states: list = None, 
+                 training: bool = False, 
+                 sketch: bool = False, 
+                 mean_trajectory: bool = False,
+                 use_obs: bool = True):
+    
         data, data_target = data
-        if sketch: print('Data input shape: ', data.shape, 'Target shape: ', data_target.shape)
         n_data, nt = data.shape[:2]
+        if sketch: 
+            print('Data input shape: ', data.shape, 
+                  'Target shape: ', data_target.shape)
 
         embedding = self.encoder(data, training=training)
 
         embeddings = []
-        for latent_idx, ladder in enumerate(self.ladder):
-            embedding_tmp = activations[self.cfg.latent_activation](ladder(embedding))
-            # embedding = embedding_tmp if not self.cfg.skip_connections else embedding_tmp + embedding
-            embedding = embedding_tmp + embedding
+        for ladder, dropout in zip(self.ladder, self.dropout):
+            embedding = activations[self.cfg.latent_activation](ladder(embedding)) + embedding
+            # if training: embedding = dropout(embedding, deterministic=not training)
+            # including this really meaningfully affects the validation error, quetions to be answered! 
             embeddings.insert(0, embedding)
 
-
-        jumps = [2**i for i in range(self.cfg.n_latent-1, -1, -1)]
-        print(jumps)
+        if self.cfg.clockwork:
+            jumps = [2**i for i in range(self.cfg.n_latent-1, -1, -1)]
+        else:
+            jumps = [1 for _ in range(self.cfg.n_latent)]
 
         priors = []
         posteriors = [] 
         next_latent_states = {}              
         for latent_idx, (embedding, jump) in enumerate(zip(embeddings, jumps)):  # deeper latent space longer embeddeding function
-            print('jump', jump)
+
             if not jump == 1:
                 embedding = jnp.split(embedding, embedding.shape[1]//jump, axis=1)
-                # embedding = jnp.concatenate([e for i, e in enumerate(embedding) if i % jump == 0], axis=1)
                 embedding = jnp.concatenate([jnp.mean(e, axis=1, keepdims=True) for e in embedding], axis=1)
-                embedding = self.dropout(embedding, deterministic=not training)
             
             nt = embedding.shape[1]
             
-            print('nt', nt)
-            scan = nn.scan(lambda f, state, inputs: f(state, inputs, training=training),
+            scan = nn.scan(lambda f, state, inputs: f(state, inputs, use_obs=use_obs, mean_trajectory=mean_trajectory),
                        variable_broadcast='params',
                        split_rngs=dict(params=False, sample=True, dropout=True),
                        in_axes=1, out_axes=1,
@@ -82,46 +99,44 @@ class HierarchicalTDVAE(nn.Module):
 
             if latent_idx == 0:
                 zero_state_over_time = self.transfer.zero_state((n_data, nt))
-                # context = {k: jnp.zeros_like(v) for k, v in zero_state_over_time.items() if not isinstance(v, tuple)}
                 context = jnp.concatenate([zero_state_over_time['z'], zero_state_over_time['z']], axis=-1)
 
-            print(embedding.shape, context.shape, latent_state['z'].shape, latent_state['carry'].shape)
             latent_state, (prior, posterior) = scan(self.transfer, latent_state, (embedding, context))
 
             context = posterior['context']
-            context = jnp.concatenate([jnp.repeat(x, 2, axis=1) for x in jnp.split(context, nt, axis=1)], axis=1)
+            if self.cfg.clockwork:  
+                context = jnp.concatenate([jnp.repeat(x, 2, axis=1) for x in jnp.split(context, nt, axis=1)], axis=1)
 
             priors.append(prior)
             posteriors.append(posterior)
             next_latent_states[f'l{latent_idx}'] = latent_state
 
+            if sketch:
+                print('Embedding: ', embedding.shape,
+                      'Context: ',   context.shape,
+                      'Hierachy structure: ', jumps
+                )
+
         for prior_tmp, posterior_tmp in zip(priors, posteriors):
             prior_tmp['dist'] = tfd.Normal(prior_tmp['mean'], prior_tmp['std'])
             posterior_tmp['dist'] = tfd.Normal(posterior_tmp['mean'], posterior_tmp['std'])
         
-
-        z = posterior['z'] #if training else posterior['mean']
-        y = self.decoder(z, training=training)  # when not training, posterior = prior
+        y = self.decoder(posterior['z'], training=training)  # when not training, posterior = prior and when mean_trajectory 'z' = 'mean'
         if sketch: print('y shape: ', y.shape)
         
         likelihood = tfd.Normal(y, self.cfg.y_std)
         
-        nll = -self.cfg.beta * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
+        nll = - self.cfg.beta * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
         
-        if self.cfg.likelihood_prior:
-            likelihood_prior = tfd.Normal(self.decoder(prior['z'], training=training), self.cfg.y_std)
-            nll = nll - self.cfg.beta * jnp.mean(likelihood_prior.log_prob(data_target), axis=0).sum()
-
         kl_div =  jnp.sum(jnp.array([jnp.mean(posterior['dist'].kl_divergence(prior['dist']), axis=0).sum() 
                             for prior, posterior in zip(priors, posteriors)]))  # mean over the batch dimension
         
-        std_losses = [(pri['std'] - post['std'])**2 for pri, post in zip(priors, posteriors)]
-        std_losses = jnp.sum(jnp.array([jnp.array([1000. * jnp.where(std_loss > 0.01, std_loss, 0.01)]).mean(0).sum() for std_loss in std_losses]))
-        
-        loss = nll + kl_div # + std_losses
+        loss = nll + kl_div 
 
         y_mean_r_over_time = mean_r(data_target, y, axis=(0, 2))
         y_mean_r = jnp.mean(y_mean_r_over_time, axis=0)
+
+        directional_accuracy = compute_da(data_target, y)
 
         signal = dict(posterior_std=posterior['std'].mean(),
                       loss=loss,
@@ -135,7 +150,7 @@ class HierarchicalTDVAE(nn.Module):
                       data_target=data_target,
                       y_r=y,
                       latent_states=next_latent_states,
-                      std_loss=std_losses)
+                      directional_accuracy=directional_accuracy)
 
         return loss, signal
 

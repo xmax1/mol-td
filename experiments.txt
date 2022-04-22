@@ -1,54 +1,288 @@
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 1 --skip_connections -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 1 --skip_connections -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 1 --skip_connections -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 1 -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 1 -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 1 -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 2000 --skip_connections -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 2000 --skip_connections -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 2000 --skip_connections -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 2000 -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 2000 -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 2000 -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 8000 --skip_connections -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 8000 --skip_connections -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 8000 --skip_connections -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 8000 -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 8000 -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 1 -y_std 1.0 -b 8000 -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 1 --skip_connections -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 1 --skip_connections -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 1 --skip_connections -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 1 -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 1 -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 1 -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 2000 --skip_connections -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 2000 --skip_connections -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 2000 --skip_connections -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 2000 -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 2000 -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 2000 -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 8000 --skip_connections -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 8000 --skip_connections -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 8000 --skip_connections -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 8000 -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 8000 -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 2 -y_std 1.0 -b 8000 -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 1 --skip_connections -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 1 --skip_connections -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 1 --skip_connections -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 1 -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 1 -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 1 -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 2000 --skip_connections -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 2000 --skip_connections -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 2000 --skip_connections -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 2000 -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 2000 -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 2000 -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 8000 --skip_connections -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 8000 --skip_connections -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 8000 --skip_connections -bs 256 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 8000 -bs 32 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 8000 -bs 128 -g initial_sweep2 -p TimeDynamics
---wb -t LSTM -nt 5 -el 2 -dl 2 -tl 2 -ne 30 -nl 3 -y_std 1.0 -b 8000 -bs 256 -g initial_sweep2 -p TimeDynamics
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t GRU -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 1 -ndec 1 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 2 -ndec 2 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 20 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 1 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 2 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.005 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.01 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.05 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw True -tag no_tag --wb -p TimeDynamics -g mvp
+-t LSTM -nenc 3 -ndec 3 -ne 40 -nl 3 -y_std 0.1 -bs 128 -cw False -tag no_tag --wb -p TimeDynamics -g mvp

@@ -70,10 +70,10 @@ class Config:
     decoder:                str   = 'MLP'
     latent_activation:      str   = 'leaky_relu'
     map_activation:         str   = 'leaky_relu'
-    beta:                   float = 1000.
-    skip_connections:       bool  = False
-    post_into_prior:        bool  = False
+    beta:                   float = 1.
     likelihood_prior:       bool  = False
+    clockwork:              bool  = False
+    mean_trajectory:        bool  = False
 
     # DATA
     n_target:           int = None
