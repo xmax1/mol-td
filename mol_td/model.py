@@ -27,11 +27,13 @@ def mean_r(x, y, axis=0):
 def compute_da(data, y):
     data0, data1 = data[:-1], data[1:]
     datar = data1 - data0
-    datar = datar / jnp.linalg.norm(datar, axis=-1, keepdims=True)
+    datal = jnp.linalg.norm(datar, axis=-1, keepdims=True)
+    datar = datar / datal
     y0, y1 = y[:-1], y[1:]
     yr = y1 - y0
-    yr = yr / jnp.linalg.norm(yr, axis=-1, keepdims=True)
-    return jnp.mean(jnp.sum(yr*datar, axis=-1))
+    yl = jnp.linalg.norm(yr, axis=-1, keepdims=True)
+    yr = yr / yl
+    return jnp.mean(jnp.sum(yr*datar, axis=-1)), jnp.mean(datal / yl)
 
 
 
@@ -136,7 +138,7 @@ class HierarchicalTDVAE(nn.Module):
         y_mean_r_over_time = mean_r(data_target, y, axis=(0, 2))
         y_mean_r = jnp.mean(y_mean_r_over_time, axis=0)
 
-        directional_accuracy = compute_da(data_target, y)
+        directional_accuracy, step_size_accuracy = compute_da(data_target, y)
 
         signal = dict(posterior_std=posterior['std'].mean(),
                       loss=loss,
@@ -150,7 +152,8 @@ class HierarchicalTDVAE(nn.Module):
                       data_target=data_target,
                       y_r=y,
                       latent_states=next_latent_states,
-                      directional_accuracy=directional_accuracy)
+                      directional_accuracy=directional_accuracy,
+                      step_size_accuracy=step_size_accuracy)
 
         return loss, signal
 
