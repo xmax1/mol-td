@@ -69,7 +69,7 @@ class HierarchicalTDVAE(nn.Module):
         for ladder, dropout in zip(self.ladder, self.dropout):
             embedding = activations[self.cfg.latent_activation](ladder(embedding)) + embedding
             # if training: embedding = dropout(embedding, deterministic=not training)
-            # including this really meaningfully affects the validation error, quetions to be answered! 
+            # including this really meaningfully affects the validation error, questions to be answered! 
             embeddings.insert(0, embedding)
 
         if self.cfg.clockwork:
@@ -123,13 +123,23 @@ class HierarchicalTDVAE(nn.Module):
             prior_tmp['dist'] = tfd.Normal(prior_tmp['mean'], prior_tmp['std'])
             posterior_tmp['dist'] = tfd.Normal(posterior_tmp['mean'], posterior_tmp['std'])
         
-        y = self.decoder(posterior['z'], training=training)  # when not training, posterior = prior and when mean_trajectory 'z' = 'mean'
+        predict_sigma = True
+        y = self.decoder(posterior['z'], training=training, predict_sigma=predict_sigma)  # when not training, posterior = prior and when mean_trajectory 'z' = 'mean'
+        
+        
+        if predict_sigma:
+            y, std = y
+        else:
+            std = self.cfg.y_std
+
         if sketch: print('y shape: ', y.shape)
+
+        likelihood = tfd.Normal(y, std)
+        y = likelihood.sample(seed=self.make_rng('sample'))
         
-        likelihood = tfd.Normal(y, self.cfg.y_std)
-        
-        nll = - self.cfg.beta * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
-        
+        # nll = - self.cfg.beta * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
+        nll = ((y - data_target)**2).mean(0).sum()
+
         kl_div =  jnp.sum(jnp.array([jnp.mean(posterior['dist'].kl_divergence(prior['dist']), axis=0).sum() 
                             for prior, posterior in zip(priors, posteriors)]))  # mean over the batch dimension
         

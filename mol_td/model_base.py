@@ -38,13 +38,22 @@ class MLPDecoder(nn.Module):
     cfg: Config
 
     @nn.compact
-    def __call__(self, z, training=False):
+    def __call__(self, z, training=False, predict_sigma=False):
         bs, nt = z.shape[:2]
         for n_hidden in self.cfg.dec_hidden: # the first contains the feature dimension
             z = activations[self.cfg.map_activation](nn.Dense(n_hidden)(z))
             z = nn.Dropout(rate=self.cfg.dropout)(z, deterministic=not training)  # https://github.com/google/flax/issues/1004
-        z = jnp.tanh(nn.Dense(self.cfg.dec_hidden[-1])(z))  # values in dataset restricted between 1 and -1
-        z = z.reshape((bs, nt, self.cfg.n_atoms, 3))
+        
+        if predict_sigma:
+            mean = nn.Dense(self.cfg.dec_hidden[-1])(z)
+            # std = jnn.softplus(nn.Dense(self.cfg.dec_hidden[-1])(z + 0.54)) + self.cfg.latent_dist_min_std
+            std = jnn.softplus(nn.Dense(1)(z + 0.54)) + self.cfg.latent_dist_min_std
+
+            # z = (mean.reshape((bs, nt, self.cfg.n_atoms, 3)), std.reshape((bs, nt, self.cfg.n_atoms, 3)))
+            z = (mean.reshape((bs, nt, self.cfg.n_atoms, 3)), std.reshape((bs, nt, 1, 1)))
+        else:
+            z = jnp.tanh(nn.Dense(self.cfg.dec_hidden[-1])(z))  # values in dataset restricted between 1 and -1
+            z = z.reshape((bs, nt, self.cfg.n_atoms, 3))
         return z
 
 
@@ -108,6 +117,8 @@ class GNNDecoder(nn.Module):
             
 
         x = jnp.tanh(nn.Dense(self.cfg.dec_hidden[-1])(x))  # values in dataset restricted between 1 and -1
+        
+        
         return x
 
 
