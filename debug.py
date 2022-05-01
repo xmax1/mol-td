@@ -1,67 +1,80 @@
-from mol_td.utils import load_config, name_run, log_video
-from mol_td.data_fns import load_data, prep_data, get_split, prep_dataloaders
-from mol_td import models
+from mol_td.config import Config
+from mol_td.data_fns import create_dataloaders
+import jraph 
+from typing import Sequence
+from jax import numpy as jnp
+from jraph._src import utils
+from flax import linen as nn
+
+cfg = Config(r_cutoff=100., batch_size=16)
+
+tr_loader, val_loader, test_loader = create_dataloaders(cfg)
+
+graph, target = next(tr_loader)
+
+class ExplicitMLP(nn.Module):
+  """A flax MLP."""
+  features: Sequence[int]
+
+  @nn.compact
+  def __call__(self, inputs):
+    x = inputs
+    for i, lyr in enumerate([nn.Dense(feat) for feat in self.features]):
+      x = lyr(x)
+      if i != len(self.features) - 1:
+        x = nn.relu(x)
+    return x
+
+
+# Functions must be passed to jraph GNNs, but pytype does not recognise
+# linen Modules as callables to here we wrap in a function.
+def make_embed_fn(latent_size):
+  def embed(inputs):
+    return nn.Dense(latent_size)(inputs)
+  return embed
+
+
+def make_mlp(features):
+  @jraph.concatenated_args
+  def update_fn(inputs):
+    return ExplicitMLP(features)(inputs)
+  return update_fn
+
+
+class GraphNetwork(nn.Module):
+  """A flax GraphNetwork."""
+  mlp_features: Sequence[int]
+  latent_size: int
+
+  @nn.compact
+  def __call__(self, graph):
+    # Add a global parameter for graph classification.
+    graph = graph._replace(globals=jnp.zeros([graph.n_node.shape[0], 1]))
+
+    embedder = jraph.GraphMapFeatures(
+        embed_node_fn=make_embed_fn(self.latent_size),
+        embed_edge_fn=make_embed_fn(self.latent_size),)
+        # embed_global_fn=make_embed_fn(self.latent_size))
+    
+    net = jraph.GraphNetwork(
+        update_node_fn=make_mlp(self.mlp_features),
+        update_edge_fn=make_mlp(self.mlp_features),)
+        # The global update outputs size 2 for binary classification.
+        # update_global_fn=make_mlp(self.mlp_features + (2,)))  # pytype: disable=unsupported-operands
+    return net(embedder(graph))
+
+net = GraphNetwork(mlp_features=(cfg.graph_mlp_features, cfg.graph_mlp_features), 
+                   latent_size=cfg.graph_mlp_features, 
+                   aggregate_edges_for_nodes_fn=utils.segment_mean)
+
+
+net = GraphNetwork(mlp_features=(128, 128), latent_size=128)
 
 import jax
-from jax import jit
-from typing import Any, Callable, Sequence, Optional
-from jax import lax, random as rnd, numpy as jnp
-import flax
-from flax.core import freeze, unfreeze
-from flax import linen as nn
-import optax
-import wandb
-import numpy as np
-import torch
-from torch.utils.data import DataLoader, TensorDataset
-import tqdm
 
+# Initialize the network.
+params = net.init(jax.random.PRNGKey(42), graph)
 
-# experiment configuration
-cfg = load_config('/home/amawi/projects/mol-td/configs/default_config.yaml')
+out = net.apply(params, graph)
 
-# load and prep the data
-data, raw_data = load_data('/home/amawi/projects/mol-td/data/uracil_dft.npz')
-train_loader, val_loader, test_loader = prep_dataloaders(cfg, data)
-
-# initialise the model
-model = models[cfg['MODEL']['model']](cfg['MODEL'])
-
-rng, video_rng, params_rng, sample_rng = rnd.split(rnd.PRNGKey(cfg['seed']), 4)
-ex_batch = next(train_loader)
-params = model.init(dict(params=params_rng, sample=sample_rng), ex_batch)
-
-tx = optax.sgd(learning_rate=cfg['TRAIN']['lr'])
-opt_state = tx.init(params)
-
-loss_grad_fn = jit(jax.value_and_grad(model.apply, has_aux=True))
-fwd = jit(model.apply)
-
-run = wandb.init(project=cfg['WANDB']['project'], 
-                 id=name_run(cfg)['WANDB']['id'], 
-                 entity=cfg['WANDB']['user'], 
-                 config=cfg['TRAIN']) if cfg['WANDB']['track'] else None
-
-with run:
-    for epoch in range(cfg['TRAIN']['n_epochs']):
-        for batch in tqdm(train_loader, desc='training'):
-            
-            (loss, signal), grads = loss_grad_fn(params, batch)
-            updates, opt_state = tx.update(grads, opt_state)
-            params = optax.apply_updates(params, updates)
-
-            wandb.log({'loss': loss, 
-                    'kl_div': signal['kl_div'], 
-                    'nll': signal['nll']})
-
-        train_loader.shuffle()
-
-        if val_loader is not None:
-            for batch_idx, batch in enumerate(val_loader):
-                val_loss, signal = fwd(params, batch)
-                
-            wandb.log({'val_loss': loss, 'epoch': epoch})
-
-        if cfg['TRAIN']['predict_video']:
-            log_video(batch, 'data_video')
-            log_video(signal['prediction'], 'prediction_video')
+print(out)

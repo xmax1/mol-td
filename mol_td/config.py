@@ -74,17 +74,27 @@ class Config:
     likelihood_prior:       bool  = False
     clockwork:              bool  = False
     mean_trajectory:        bool  = False
+    node_features:          tuple = ('R', 'F', 'z')  # R=position, F=Force, z=atom_type
 
     # DATA
     n_target:           int = None
     n_input:            int = None
+    data_path:          str = './data/md17/uracil_dft.npz'
+
+    # SYSTEM
+    r_cutoff:           float = 0.3
+    box_size:           float = 1.
+    dr_threshold:       float = 0.0
+    periodic:           bool = False
+    receivers_idx:      int = 0
+    senders_idx:        int = 1
 
     # TRAINING
     n_epochs:           int = 10
     batch_size:         int = 128
     lr:                 float = 0.001
-    n_timesteps:        int = 3
-    n_eval_timesteps:   int = 3
+    n_timesteps:        int = 4
+    n_eval_timesteps:   int = 4
     n_eval_warmup:      int = None
     xlog_media:         bool = False
     clip_grad_norm_by:  float = 10000
