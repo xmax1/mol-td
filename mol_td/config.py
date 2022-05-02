@@ -1,10 +1,13 @@
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 import jax.numpy as jnp
 import jax
 from datetime import datetime
 from math import ceil
+import os
+from utils import md17_log_wandb_videos_or_images
 
 
 def compile_data(p, f, a,  flatten=False):
@@ -45,7 +48,7 @@ enc_dec = {'MLP': {'n_features': lambda n_atoms: n_atoms * (3 + 3 + 1),
 class Config:
     seed: int = 1
 
-    # WANDB
+    # WANDB / LOGGING
     wb:             bool = False
     wandb_status:   str  = 'offline'
     user:           str  = 'xmax1'
@@ -54,6 +57,8 @@ class Config:
     id:             str  = None  # null for nada for none
     group:          str  = None
     WANDB_API_KEY:  int  = 1
+    compute_rdfs:   bool = True
+    media_logger:   Callable = None
 
     # MODEL
     model:                  str   = 'SimpleTDVAE'
@@ -74,16 +79,24 @@ class Config:
     likelihood_prior:       bool  = False
     clockwork:              bool  = False
     mean_trajectory:        bool  = False
+    predict_sigma:          bool  = False
     node_features:          tuple = ('R', 'F', 'z')  # R=position, F=Force, z=atom_type
+    edge_features:          tuple = ('r',)
+    
+    graph_mlp_features:     int  = (10, 10)
+    graph_latent_size:      int  = 10
 
     # DATA
     n_target:           int = None
     n_input:            int = None
-    data_path:          str = './data/md17/uracil_dft.npz'
+    dataset:            str = './data/md17/uracil_dft.npz'
+    load_model:         str = None
+    eval:               bool = False
+    data_vars:          dict = None
 
     # SYSTEM
-    r_cutoff:           float = 0.3
-    box_size:           float = 1.
+    r_cutoff:           float = 2.
+    box_size:           float = 8.
     dr_threshold:       float = 0.0
     periodic:           bool = False
     receivers_idx:      int = 0
@@ -91,7 +104,7 @@ class Config:
 
     # TRAINING
     n_epochs:           int = 10
-    batch_size:         int = 128
+    batch_size:         int = 16
     lr:                 float = 0.001
     n_timesteps:        int = 4
     n_eval_timesteps:   int = 4
@@ -111,6 +124,12 @@ class Config:
         print(f'Model: {self.model} \
                 \n n_enc_layers: {self.n_enc_layers} \
                 \n n_dec_layers: {self.n_dec_layers} ')
+        
+        self.experiment = self.dataset.split('/')[0]
+        self.dataset = f'./data/{self.dataset}.npz'
+
+        if self.load_model is not None:
+            self.load_model = os.path.join(self.experiment, self.load_model)
 
         if self.id is None:
             self.id = datetime.now().strftime('%y%m%d%H%M%S')
@@ -126,6 +145,88 @@ class Config:
         if self.n_eval_warmup is None:
             self.n_eval_warmup = max(8, int(0.25 * self.n_eval_timesteps))
 
+        if ('md17' != self.experiment):
+            self.compute_rdfs = False
+        
+        if 'md17' == self.experiment:
+            self.media_logger = md17_log_wandb_videos_or_images
+        elif 'nve' == self.experiment:
+            self.media_logger = None
+            from jax_md import space, energy, quantity
+            from jax import jit, random as rnd
+            from jax import lax
+
+            import time
+
+            from jax_md import space, smap, energy, minimize, quantity, simulate
+            
+            def generate_initial(cfg,
+                                 box_size=1.,
+                                 species=None,
+                                 sigma=None,
+                                 dt=1e-2):
+
+                print(f'Generating intial for box_size {box_size:.2f}, dt {dt:.2f}')
+                print('sigma \n', sigma)
+
+                displacement, shift_fn = space.periodic(box_size) 
+                energy_fn = energy.soft_sphere_pair(displacement, species=species, sigma=sigma)
+                
+                init, apply = simulate.nve(energy_fn, shift_fn, dt)
+                update_fn = jit(lambda i, state: apply(state))
+
+                key = rnd.PRNGKey(cfg.seed)
+                R = rnd.uniform(key, (cfg.n_nodes, cfg.n_dim), minval=0.0, maxval=cfg.data_vars['box_size'], dtype=np.float32)
+                state = init(key, R, kT=0.0)
+
+                data = {'R': [], 'F': [], 'V':[]}
+                for i in range(cfg.n_eval_warmup):
+                    state = update_fn(state)
+                    data['R'] += [state.position]
+                    data['F'] += [state.force]
+                    data['V'] += [state.velocity]
+                data['z'] = [cfg.species + 1]
+                data['data_vars'] = {'box_size': box_size, 'species': species, 'sigma': sigma, 'dt': dt}
+                return data
+
+            def evaluate_position(positions, initial_info):
+                F, V, mass = initial_info
+
+                states = states.reshape(-1, *states.shape[2:])
+
+                displacement, shift_fn = space.periodic(self.data_vars['box_size']) 
+                energy_fn = energy.soft_sphere_pair(displacement, species=self.data_vars['species'], sigma=self.data_vars['sigma'])
+                
+                force_fn = quantity.canonicalize_force(energy_fn)
+                dt = self.data_vars['dt']
+                            
+                data = {'R': [], 'F': [], 'V':[], 'PE': [], 'KE':[], 'TE':[]}
+                for position in positions:
+
+                    dt = dt
+                    dt_2 = dt / 2
+                    dt2_2 = dt ** 2 / 2
+
+                    Minv = 1 / mass
+
+                    F_new = force_fn(position)
+                    V += (F + F_new) * dt_2 * Minv
+
+                    F = F_new
+
+                    PE = energy_fn(position)
+                    KE = quantity.kinetic_energy(V)
+
+                    data['R'] += [position]
+                    data['F'] += [F]
+                    data['V'] += [V]
+                    data['KE'] += [KE]
+                    data['PE'] += [PE]
+                    data['TE'] += [KE + PE]
+                return data, {'F': F, 'V': V, 'mass': mass}
+
+            self.evaluate_position = evaluate_position
+            
     # @property
     # def n_data(self):
     #     return self.n_data

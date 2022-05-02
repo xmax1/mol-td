@@ -25,7 +25,6 @@ class ExplicitMLP(nn.Module):
         x = nn.relu(x)
     return x
 
-
 # Functions must be passed to jraph GNNs, but pytype does not recognise
 # linen Modules as callables to here we wrap in a function.
 def make_embed_fn(latent_size):
@@ -58,17 +57,17 @@ class GraphNetwork(nn.Module):
     
     net = jraph.GraphNetwork(
         update_node_fn=make_mlp(self.mlp_features),
-        update_edge_fn=make_mlp(self.mlp_features),)
+        update_edge_fn=make_mlp(self.mlp_features),
+        aggregate_edges_for_globals_fn=utils.segment_mean)
         # The global update outputs size 2 for binary classification.
         # update_global_fn=make_mlp(self.mlp_features + (2,)))  # pytype: disable=unsupported-operands
     return net(embedder(graph))
 
 net = GraphNetwork(mlp_features=(cfg.graph_mlp_features, cfg.graph_mlp_features), 
-                   latent_size=cfg.graph_mlp_features, 
-                   aggregate_edges_for_nodes_fn=utils.segment_mean)
+                   latent_size=cfg.graph_mlp_features)
 
 
-net = GraphNetwork(mlp_features=(128, 128), latent_size=128)
+net = GraphNetwork(mlp_features=(14, 14), latent_size=14)
 
 import jax
 
@@ -77,4 +76,6 @@ params = net.init(jax.random.PRNGKey(42), graph)
 
 out = net.apply(params, graph)
 
-print(out)
+print(out.nodes.shape)
+
+print(out.nodes.reshape(cfg.batch_size, cfg.n_timesteps, -1).shape)

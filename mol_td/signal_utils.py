@@ -2,6 +2,7 @@ import jax.numpy as jnp
 from itertools import product, combinations
 import numpy as np
 
+
 atoms_list = {1: 'H',
          2: 'He',
          3: 'Li',
@@ -41,10 +42,8 @@ def compute_rdfs_all_unique_bonds(atoms, positions, n_skip=10):
     return rbfs
 
 
-
 def compute_rdfs(atoms, positions, mode='all_unique_bonds'):
-
     if mode == 'all_unique_bonds':
         rdfs = compute_rdfs_all_unique_bonds(atoms, positions)
-
     return rdfs
+

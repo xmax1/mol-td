@@ -9,7 +9,7 @@ from .model_latent import *
 from .config import Config, enc_dec
 
 encoders =  {'MLP': MLPEncoder,
-            'GNN': GNNEncoder}
+            'GNN': GraphNetwork}
 decoders = {'MLP': MLPDecoder,
             'GNN': GNNDecoder}
 
@@ -58,9 +58,9 @@ class HierarchicalTDVAE(nn.Module):
                  use_obs: bool = True):
     
         data, data_target = data
-        n_data, nt = data.shape[:2]
+        
         if sketch: 
-            print('Data input shape: ', data.shape, 
+            print('Data input shape: ', data.nodes.shape, 
                   'Target shape: ', data_target.shape)
 
         embedding = self.encoder(data, training=training)
@@ -72,6 +72,8 @@ class HierarchicalTDVAE(nn.Module):
             # including this really meaningfully affects the validation error, questions to be answered! 
             embeddings.insert(0, embedding)
 
+        n_data, nt = embedding.shape[:2]
+        
         if self.cfg.clockwork:
             jumps = [2**i for i in range(self.cfg.n_latent-1, -1, -1)]
         else:
@@ -123,11 +125,11 @@ class HierarchicalTDVAE(nn.Module):
             prior_tmp['dist'] = tfd.Normal(prior_tmp['mean'], prior_tmp['std'])
             posterior_tmp['dist'] = tfd.Normal(posterior_tmp['mean'], posterior_tmp['std'])
         
-        predict_sigma = True
-        y = self.decoder(posterior['z'], training=training, predict_sigma=predict_sigma)  # when not training, posterior = prior and when mean_trajectory 'z' = 'mean'
+        
+        y = self.decoder(posterior['z'], training=training, predict_sigma=self.cfg.predict_sigma)  # when not training, posterior = prior and when mean_trajectory 'z' = 'mean'
         
         
-        if predict_sigma:
+        if self.cfg.predict_sigma:
             y, std = y
         else:
             std = self.cfg.y_std
@@ -137,10 +139,10 @@ class HierarchicalTDVAE(nn.Module):
         likelihood = tfd.Normal(y, std)
         y = likelihood.sample(seed=self.make_rng('sample'))
         
-        # nll = - self.cfg.beta * jnp.mean(likelihood.log_prob(data_target), axis=0).sum()
-        nll = ((y - data_target)**2).mean(0).sum()
+        nll = -self.cfg.beta * likelihood.log_prob(data_target).mean(0).sum()
+        # nll = ((y - data_target)**2).mean(0).sum()
 
-        kl_div =  jnp.sum(jnp.array([jnp.mean(posterior['dist'].kl_divergence(prior['dist']), axis=0).sum() 
+        kl_div =  jnp.sum(jnp.array([posterior['dist'].kl_divergence(prior['dist']).mean(0).sum() 
                             for prior, posterior in zip(priors, posteriors)]))  # mean over the batch dimension
         
         loss = nll + kl_div 
@@ -311,6 +313,8 @@ class SimpleVAE(nn.Module):
                       y_force=y_force)
         
         return loss, signal
+
+
 
 
 models = {'SimpleVAE': SimpleVAE,

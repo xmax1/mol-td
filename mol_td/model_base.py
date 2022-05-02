@@ -11,9 +11,83 @@ from typing import Callable
 from jax import lax
 from math import ceil, floor
 
+import jraph 
+from typing import Sequence
+from jax import numpy as jnp
+from jraph._src import utils
+from flax import linen as nn
+
 
 activations = {'leaky_relu': partial(nn.leaky_relu, negative_slope=.2), 
                'relu': nn.relu}
+
+
+class ExplicitMLP(nn.Module):
+  """A flax MLP."""
+  features: Sequence[int]
+
+  @nn.compact
+  def __call__(self, inputs):
+    x = inputs
+    for i, lyr in enumerate([nn.Dense(feat) for feat in self.features]):
+      x = lyr(x)
+      if i != len(self.features) - 1:
+        x = nn.relu(x)
+    return x
+
+# Functions must be passed to jraph GNNs, but pytype does not recognise
+# linen Modules as callables to here we wrap in a function.
+def make_embed_fn(latent_size):
+  def embed(inputs):
+    return nn.Dense(latent_size)(inputs)
+  return embed
+
+
+def make_mlp(features):
+  @jraph.concatenated_args
+  def update_fn(inputs):
+    return ExplicitMLP(features)(inputs)
+  return update_fn
+
+
+class GraphNetwork(nn.Module):
+  """A flax GraphNetwork."""
+  cfg: Config
+
+  @nn.compact
+  def __call__(self, graph, training=True):
+    # Add a global parameter for graph classification.
+    graph = graph._replace(globals=jnp.zeros([graph.n_node.shape[0], 1]))
+
+    if self.cfg.edge_features is not None:
+      embed_edge_fn = make_embed_fn(self.cfg.graph_latent_size)
+      update_edge_fn = make_mlp(self.cfg.graph_mlp_features)
+    else:
+      embed_edge_fn = None
+      update_edge_fn = None
+    
+    embedder = jraph.GraphMapFeatures(
+        embed_node_fn=make_embed_fn(self.cfg.graph_latent_size),
+        embed_edge_fn=embed_edge_fn,)
+        # embed_global_fn=make_embed_fn(self.latent_size))
+    
+    net = jraph.GraphNetwork(
+        update_node_fn=make_mlp(self.cfg.graph_mlp_features),
+        update_edge_fn=update_edge_fn)
+        # aggregate_edges_for_globals_fn=utils.segment_mean)
+        # The global update outputs size 2 for binary classification.
+        # update_global_fn=make_mlp(self.mlp_features + (2,)))  # pytype: disable=unsupported-operands
+    
+    h = net(embedder(graph))
+    n_node = h.n_node[0]
+    bsnt = len(h.n_node)
+    h = h.nodes
+    nt = bsnt // self.cfg.batch_size
+    h = h.reshape(self.cfg.batch_size, nt, self.cfg.n_nodes, h.shape[-1])
+
+    h = MLPEncoder(self.cfg)(h)
+
+    return h
 
 
 class MLPEncoder(nn.Module):
@@ -50,10 +124,10 @@ class MLPDecoder(nn.Module):
             std = jnn.softplus(nn.Dense(1)(z + 0.54)) + self.cfg.latent_dist_min_std
 
             # z = (mean.reshape((bs, nt, self.cfg.n_atoms, 3)), std.reshape((bs, nt, self.cfg.n_atoms, 3)))
-            z = (mean.reshape((bs, nt, self.cfg.n_atoms, 3)), std.reshape((bs, nt, 1, 1)))
+            z = (mean.reshape((bs, nt, -1, self.cfg.n_dim)), std.reshape((bs, nt, 1, 1)))
         else:
             z = jnp.tanh(nn.Dense(self.cfg.dec_hidden[-1])(z))  # values in dataset restricted between 1 and -1
-            z = z.reshape((bs, nt, self.cfg.n_atoms, 3))
+            z = z.reshape((bs, nt, -1, self.cfg.n_dim))
         return z
 
 

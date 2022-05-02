@@ -7,14 +7,59 @@ import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import matplotlib.image as img
 from matplotlib.cm import get_cmap
+import yaml
 
 
 from distutils.util import strtobool
+
+from jax import numpy as jnp
+
+
+import yaml
+
+
+def yaml_to_dict(path):
+    with open(path, 'r') as file:
+        data = yaml.safe_load(file)
+    return data
+
+
+def dict_to_yaml(data, path):
+    with open(path, 'w') as file:
+        yaml.safe_dump(data, file)
+
+
+def accumulate_signals(storage, signal):
+    signal = {k:v for k,v in signal.items() if isinstance(v, jnp.ndarray)}
+    for k, v in signal.items():
+        if not v.shape in ((1,), ()):
+            v = [v]
+        if k in storage.keys():
+            storage[k] += v
+        else:
+            storage[k] = v
+    return storage
+
+
+def filter_scalars(signal, n_batch=1., tag='', ignore=()):
+    # get the jax arrays
+    signal_arr = {k:v for k,v in signal.items() if ((isinstance(v, jnp.ndarray)) and (k not in ignore))}
+    # get the scalars
+    scalars = {tag+k:float(v)/n_batch for k,v in signal_arr.items() if v.shape in ((1,), ())}
+    # signal = {tag+k:(float(v)/n_batch) for k, v in signal.items() if isinstance(v, float)}
+    return scalars 
+
 
 def input_bool(x):
     x = strtobool(x)
     if x: return True
     else: return False
+
+def input_tuple(x):
+    x = str(x)
+    x = x.split(',')
+    x = tuple([i for i in x])
+    return x
 
 def get_sizes(data, zlim, new_min=2, new_max=200):
     data_min, data_max = zlim
@@ -66,20 +111,20 @@ def get_video(data_r, atoms, sizes, lims):
     return np.stack(data_stream, axis=0)  # t, x, y, c 
 
 
-def log_wandb_videos_or_images(data, cfg, n_batch=10, fps=2):
+def md17_log_wandb_videos_or_images(data, cfg, n_batch=10, fps=2):
     logs = {}
     for k, arr in data.items():
         n_dim = len(arr.shape)  # (bs, nt, natom, 3)
         arr = arr[:n_batch]   # (bs, nt, natom, 3)
-        arr = cfg.untransform(arr, -1., 1., new_min=cfg.data_r_min, new_max=cfg.data_r_max, mean=cfg.data_r_mean)
-        sizes = get_sizes(arr[..., -1], cfg.data_lims[-1])  
+        arr = cfg.untransform(arr, -1., 1., new_min=cfg.R_min, new_max=cfg.R_max, mean=cfg.R_mean)
+        sizes = get_sizes(arr[..., -1], cfg.R_lims[-1])  
 
         if n_dim == 3:
-            media = get_images(arr, cfg.atoms, sizes, cfg.data_lims)
+            media = get_images(arr, cfg.nodes, sizes, cfg.R_lims)
             media = [wandb.Image(m) for m in media]
         
         elif n_dim == 4:
-            media = get_video(arr, cfg.atoms, sizes, cfg.data_lims)
+            media = get_video(arr, cfg.nodes, sizes, cfg.R_lims)
             media = wandb.Video(np.transpose(media, (0, 3, 1, 2)), fps=fps)
         else:
             print(f'Media {k} is shape {arr.shape}')
