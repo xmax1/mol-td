@@ -7,8 +7,16 @@ import jax
 from datetime import datetime
 from math import ceil
 import os
-from utils import md17_log_wandb_videos_or_images
+from .utils import md17_log_wandb_videos_or_images
+from .evaluation import evaluate_position_nve
 
+evaluate_positions = {'md17': None,
+                      'nve': evaluate_position_nve
+}
+
+media_loggers = {'md17': md17_log_wandb_videos_or_images,
+                 'nve': None
+}
 
 def compile_data(p, f, a,  flatten=False):
     n_data, n_atom = p.shape[:2]
@@ -58,7 +66,6 @@ class Config:
     group:          str  = None
     WANDB_API_KEY:  int  = 1
     compute_rdfs:   bool = True
-    media_logger:   Callable = None
 
     # MODEL
     model:                  str   = 'SimpleTDVAE'
@@ -93,6 +100,9 @@ class Config:
     load_model:         str = None
     eval:               bool = False
     data_vars:          dict = None
+    run_path:           str = None
+    n_unroll_eval:      int = 0
+    split:              tuple = (0.7, 0.15, 0.15)
 
     # SYSTEM
     r_cutoff:           float = 2.
@@ -147,94 +157,7 @@ class Config:
 
         if ('md17' != self.experiment):
             self.compute_rdfs = False
-        
-        if 'md17' == self.experiment:
-            self.media_logger = md17_log_wandb_videos_or_images
-        elif 'nve' == self.experiment:
-            self.media_logger = None
-            from jax_md import space, energy, quantity
-            from jax import jit, random as rnd
-            from jax import lax
 
-            import time
-
-            from jax_md import space, smap, energy, minimize, quantity, simulate
-            
-            def generate_initial(cfg,
-                                 box_size=1.,
-                                 species=None,
-                                 sigma=None,
-                                 dt=1e-2):
-
-                print(f'Generating intial for box_size {box_size:.2f}, dt {dt:.2f}')
-                print('sigma \n', sigma)
-
-                displacement, shift_fn = space.periodic(box_size) 
-                energy_fn = energy.soft_sphere_pair(displacement, species=species, sigma=sigma)
-                
-                init, apply = simulate.nve(energy_fn, shift_fn, dt)
-                update_fn = jit(lambda i, state: apply(state))
-
-                key = rnd.PRNGKey(cfg.seed)
-                R = rnd.uniform(key, (cfg.n_nodes, cfg.n_dim), minval=0.0, maxval=cfg.data_vars['box_size'], dtype=np.float32)
-                state = init(key, R, kT=0.0)
-
-                data = {'R': [], 'F': [], 'V':[]}
-                for i in range(cfg.n_eval_warmup):
-                    state = update_fn(state)
-                    data['R'] += [state.position]
-                    data['F'] += [state.force]
-                    data['V'] += [state.velocity]
-                data['z'] = [cfg.species + 1]
-                data['data_vars'] = {'box_size': box_size, 'species': species, 'sigma': sigma, 'dt': dt}
-                return data
-
-            def evaluate_position(positions, initial_info):
-                F, V, mass = initial_info
-
-                states = states.reshape(-1, *states.shape[2:])
-
-                displacement, shift_fn = space.periodic(self.data_vars['box_size']) 
-                energy_fn = energy.soft_sphere_pair(displacement, species=self.data_vars['species'], sigma=self.data_vars['sigma'])
-                
-                force_fn = quantity.canonicalize_force(energy_fn)
-                dt = self.data_vars['dt']
-                            
-                data = {'R': [], 'F': [], 'V':[], 'PE': [], 'KE':[], 'TE':[]}
-                for position in positions:
-
-                    dt = dt
-                    dt_2 = dt / 2
-                    dt2_2 = dt ** 2 / 2
-
-                    Minv = 1 / mass
-
-                    F_new = force_fn(position)
-                    V += (F + F_new) * dt_2 * Minv
-
-                    F = F_new
-
-                    PE = energy_fn(position)
-                    KE = quantity.kinetic_energy(V)
-
-                    data['R'] += [position]
-                    data['F'] += [F]
-                    data['V'] += [V]
-                    data['KE'] += [KE]
-                    data['PE'] += [PE]
-                    data['TE'] += [KE + PE]
-                return data, {'F': F, 'V': V, 'mass': mass}
-
-            self.evaluate_position = evaluate_position
-            
-    # @property
-    # def n_data(self):
-    #     return self.n_data
-
-    # def save(self):
-    #     self.exp_rootdir.mkdir(parents=True, exist_ok=True)
-    #     with (self.exp_rootdir / "config.yml").open("w") as f:
-    #         yaml.dump(asdict(self), f, default_flow_style=False)
 
     def get_stats(self, data, axis=0):
         if len(data.shape) == 3:
@@ -242,52 +165,6 @@ class Config:
         return jnp.min(data, axis=axis), jnp.max(data, axis=axis), jnp.mean(data, axis=axis)
 
 
-    def load_raw_data(self, path):
-        raw_data = np.load(path)
-        positions, forces, atoms = raw_data['R'], raw_data['F'], raw_data['z']
-        n_data, n_atoms, _ = positions.shape
-        
-        self.data_r_min, self.data_r_max, self.data_r_mean = self.get_stats(positions)
-        self.data_f_min, self.data_f_max, self.data_f_mean = self.get_stats(forces)
-        self.data_atoms_min, self.data_atoms_max, self.data_atoms_mean = self.get_stats(atoms)
-
-        self.data_lims = tuple((self.data_r_min[i], self.data_r_max[i]) for i in range(3))
-
-        self.positions = positions
-        self.forces = forces
-        self.atoms = atoms
-        self.n_data = n_data
-        self.n_atoms = n_atoms
-
-        print(f' Pos-Lims: {tuple((float(self.data_r_min[i]), float(self.data_r_max[i])) for i in range(3))} \
-                \n F-Lims: {tuple((float(self.data_f_min[i]), float(self.data_f_max[i])) for i in range(3))} \
-                \n A-Lims: {int(self.data_atoms_min)} {int(self.data_atoms_max)}    ')
-
-        return positions, forces, atoms
-
-    def load_data(self, path):
-        
-        positions, forces, atoms = self.load_raw_data(path)
-
-        positions = self.transform(positions, self.data_r_min, self.data_r_max, mean=self.data_r_mean)
-        forces = self.transform(forces, self.data_f_min, self.data_f_max, mean=self.data_f_mean)
-        # atoms = self.transform(atoms, self.data_atoms_min, self.data_atoms_max, mean=self.data_atoms_mean)
-        atoms = jax.nn.one_hot((atoms-1).astype(int), int(max(atoms)))
-        atoms = atoms[None, :].repeat(self.n_data, axis=0)
-        
-        self.n_features = (atoms.shape[-1] + positions.shape[-1] + forces.shape[-1]) * self.n_atoms
-        self.n_target_features = positions.shape[-1] * self.n_atoms
-
-        # description = enc_dec[self.enc_dec]
-        # self.n_features = description['n_features'](self.n_atoms)
-        # self.n_target_features = description['n_target_features'](self.n_atoms)
-        # data, target = description['compile_data'](positions, forces, atoms)
-
-        data = jnp.concatenate([positions, forces, atoms], axis=-1)
-        target = positions
-
-        return data, target
-        
     def initialise_model_hype(self):
         '''
         recognise the difference between the embedding dimensions. 

@@ -2,6 +2,7 @@ import jax
 from jax import numpy as jnp, random as rnd, jit, vmap
 import jax.numpy as jnp 
 from .config import Config
+from dataclasses import asdict
 
 from jax_md.partition import neighbor_list, NeighborListFormat
 from jax_md import space
@@ -34,11 +35,6 @@ def create_loader(data, target, idxs, batch_size):
     return zip(data[idxs[:(n_batches*batch_size)]].reshape((n_batches, batch_size, data.shape[-1])), 
                 target[idxs[:(n_batches*batch_size)]].reshape((n_batches, batch_size, target.shape[-1])))
 
-
-def cut_remainder(data, n_batch):
-    n_batch_time, remainder = divmod(data.shape[0], n_batch)
-    data = data[:-remainder] if remainder > 0 else data
-    return data
 
 
 def filter_data_with_mechanism_for_including_first_data_point(data, idxs, batch_size):
@@ -73,46 +69,12 @@ def split_into_timesteps(data, n_timesteps):
     return data
 
 
-def prep_neval_eq_ntr(cfg, split, data, target):
-    data = split_into_timesteps(data, cfg.n_timesteps)
-    target = split_into_timesteps(target, cfg.n_timesteps)
-    n_trajectories = len(data)
-
-    n_train, n_val, n_test = (
-        int(n_trajectories * split[0]),
-        int(n_trajectories * split[1]),
-        int(n_trajectories * split[2])
-    )
-
-    key = rnd.PRNGKey(cfg.seed)
-    idxs = rnd.permutation(key, jnp.arange(0, n_trajectories))
-    tr_idxs, val_idxs, test_idxs = idxs[:n_train], idxs[n_train:(n_val+n_train)], idxs[-n_test:]
-
-    val_idxs = jnp.delete(val_idxs, jnp.where(val_idxs==0)[0])  # remove if first one! 
-    test_idxs = jnp.delete(test_idxs, jnp.where(test_idxs==0)[0])  # remove if first one! 
-    initial_states_val_data = data[(val_idxs - 1), -cfg.n_eval_warmup:, ...]
-    initial_states_test_data = data[(test_idxs - 1), -cfg.n_eval_warmup:, ...]
-    initial_states_val_target = target[(val_idxs - 1), -cfg.n_eval_warmup:, ...]
-    initial_states_test_target = target[(test_idxs - 1), -cfg.n_eval_warmup:, ...]
-
-    tr_data = cut_remainder(data[tr_idxs], cfg.batch_size)
-    val_data = cut_remainder(jnp.concatenate([initial_states_val_data, data[val_idxs]], axis=1), cfg.batch_size)
-    test_data = cut_remainder(jnp.concatenate([initial_states_test_data, data[test_idxs]], axis=1), cfg.batch_size)
-
-    tr_target = cut_remainder(target[tr_idxs], cfg.batch_size)
-    val_target = cut_remainder(jnp.concatenate([initial_states_val_target, target[val_idxs]], axis=1), cfg.batch_size)
-    test_target = cut_remainder(jnp.concatenate([initial_states_test_target, target[test_idxs]], axis=1), cfg.batch_size)
-
-    print(f'Datasets length: Train {len(tr_data)} Val {len(val_data)} Test {len(test_data)}')
-    print(f'Some idxs:  \n Train {tr_idxs[:5]} \n Val {val_idxs[:5]}')
-
-    return (tr_data, tr_target), (val_data, val_target), (test_data, test_target)
-
 def untransform(data, old_min, old_max, new_min=-1, new_max=1, mean=None):
     data = ((data - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
     if mean is not None:
         data = data + mean
     return data
+
 
 def transform(data, old_min, old_max, new_min=-1, new_max=1, mean=None):
     if mean is not None:
@@ -120,10 +82,12 @@ def transform(data, old_min, old_max, new_min=-1, new_max=1, mean=None):
     data = ((data - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
     return data
 
+
 def cut_remainder(data, n_batch):
     n_batch_time, remainder = divmod(data.shape[0], n_batch)
     data = data[:-remainder] if remainder > 0 else data
     return data
+
 
 def split_into_timesteps(data, n_timesteps):
     data = cut_remainder(data, n_timesteps)
@@ -131,13 +95,16 @@ def split_into_timesteps(data, n_timesteps):
     data = data.reshape(n_trajectories, n_timesteps, *data.shape[1:])
     return data
 
+
 def get_stats(data, axis=0):
     if len(data.shape) == 3:
         data = data.reshape(-1, data.shape[-1])
     return jnp.min(data, axis=axis), jnp.max(data, axis=axis), jnp.mean(data, axis=axis)
 
+
 def compute_edges(positions, receivers, senders):
         return jnp.linalg.norm(positions[receivers] - positions[senders], axis=-1, keepdims=True)
+
 
 def batch_graphs(nodes, edges, senders, receivers):
         graphs = []
@@ -154,6 +121,7 @@ def batch_graphs(nodes, edges, senders, receivers):
             graphs.append(graph)
         return jraph.batch(graphs)
 
+
 def prep_neval_eq_ntr(cfg, split, data, shuffle):
     data = split_into_timesteps(data, cfg.n_timesteps)
     n_trajectories = len(data)
@@ -167,7 +135,7 @@ def prep_neval_eq_ntr(cfg, split, data, shuffle):
     key = rnd.PRNGKey(cfg.seed)
     idxs = jnp.arange(0, n_trajectories)
     if shuffle: idxs = rnd.permutation(key, idxs)
-    tr_idxs, val_idxs, test_idxs = idxs[:n_train], idxs[n_train:(n_val+n_train)], idxs[-n_test:]
+    tr_idxs, val_idxs, test_idxs = idxs[:n_train], idxs[n_train:(n_val+n_train)], idxs[-(n_test+1):]
 
     val_idxs = jnp.delete(val_idxs, jnp.where(val_idxs==0)[0])  # remove if first one! 
     test_idxs = jnp.delete(test_idxs, jnp.where(test_idxs==0)[0])  # remove if first one! 
@@ -181,8 +149,10 @@ def prep_neval_eq_ntr(cfg, split, data, shuffle):
     print(f'Datasets length: Train {len(tr_data)} Val {len(val_data)} Test {len(test_data)}')
     print(f'Some idxs:  \n Train {tr_idxs[:5]} \n Val {val_idxs[:5]}')
 
-    print(tr_data.shape)
+    print('Split: ', split)
+    print(f'tr_data shape: {tr_data.shape} val_data shape: {val_data.shape} test_data shape {test_data.shape}')
     return tr_data, val_data, test_data
+
 
 def compute_edges(positions, receivers, senders):
     return jnp.linalg.norm(positions[receivers] - positions[senders], axis=-1, keepdims=True)
@@ -208,8 +178,6 @@ class DataLoader():
         self.cfg = cfg
 
         self.n_data, self.n_timesteps, self.n_nodes, self.n_node_features = nodes.shape
-
-        print(self.n_data, self.n_timesteps, self.n_nodes, self.n_node_features)
 
         self.nodes = nodes
         
@@ -242,8 +210,7 @@ class DataLoader():
 
         self.nbrs = neighbor_fn.allocate(positions) 
         
-        # print(self.nbrs.max_occupancy, 'max_occ')
-        # print(len(self.nbrs.idx[0]))
+        print(f'Allocating neighbor list, max occ now {self.nbrs.max_occupancy}')
 
         def get_edge_info(position):
             nbr = self.nbrs.update(position)
@@ -277,7 +244,7 @@ class DataLoader():
         self._order = rnd.permutation(subkey, self._order)
 
         if reset:
-            print('Resetting dataloader... ')
+            print('Resetting dataloader...')
             self._fin = 0
 
         if returns_new_key:
@@ -319,7 +286,7 @@ class DataLoader():
 def load_andor_transform_data(cfg, raw_data=None):
     print('Loading and processing data.')
     if raw_data is None:
-        raw_data = onp.load(cfg.dataset)
+        raw_data = onp.load(cfg.dataset, allow_pickle=True)
 
     keys = raw_data.keys()
 
@@ -329,13 +296,18 @@ def load_andor_transform_data(cfg, raw_data=None):
     
     setattr(cfg, 'n_dim', raw_data['R'].shape[-1])
 
-    if 'data_vars' in keys:
-        setattr(cfg, 'data_vars', raw_data['data_vars'])
+    data_vars = {k[9:]:v for k, v in raw_data.items() if 'data_var' in k}
+    print(data_vars.keys())
+    if len(data_vars) > 0: 
+        print('assigning data_vars')
+        for k, v in data_vars.items():
+            setattr(cfg, k, v)
+        # [setattr(cfg, k, v) for k, v in data_vars.items()]
 
     # Get the data statisitics
-    if not cfg.n_unroll_eval:
-        for name in cfg.node_features:
-            tmp_min, tmp_max, tmp_mean = get_stats(raw_data[name])
+    for name in cfg.node_features:
+        tmp_min, tmp_max, tmp_mean = get_stats(raw_data[name])
+        if not '{name}_min' in asdict(cfg):
             setattr(cfg, f'{name}_min', tmp_min)
             setattr(cfg, f'{name}_max', tmp_max)
             setattr(cfg, f'{name}_mean', tmp_mean)
@@ -345,11 +317,11 @@ def load_andor_transform_data(cfg, raw_data=None):
     setattr(cfg, 'n_nodes', raw_data['R'].shape[1])
     setattr(cfg, 'nodes', onp.squeeze(raw_data['z']))
 
-    print(f'R-Lims: {tuple((float(cfg.R_min[i]), float(cfg.R_max[i])) for i in range(cfg.n_dim))}')
+    print('R-lims: ' + ' | '.join([f'{cfg.R_min[i]:.3f}, {float(cfg.R_max[i]):.3f}' for i in range(cfg.n_dim)]))
 
     n_data, n_nodes, _ = raw_data['R'].shape
-    initial_info = {} | cfg.data_vars
 
+    initial_info = {} if cfg.data_vars is None else cfg.data_vars  # for datasets with or without metadata
     # Transform the data
     box_size = raw_data.get('box_size', False)
     if box_size:
@@ -359,7 +331,7 @@ def load_andor_transform_data(cfg, raw_data=None):
     initial_info['R'] = positions
 
     features = []
-    if 'z' in keys:
+    if 'z' in cfg.node_features:
         node_id = raw_data.get('z', False)
         z = jax.nn.one_hot((node_id-1), int(max(node_id)), dtype=jnp.float32)
         z = z[None, :].repeat(n_data, axis=0)
@@ -367,15 +339,15 @@ def load_andor_transform_data(cfg, raw_data=None):
         features += [z]
         initial_info['z'] = z
     
-    if 'F' in keys:
+    if 'F' in cfg.node_features:
         F = transform(raw_data['F'], -1, 1, mean=cfg.F_mean) 
         print('F-lims: ' + ' | '.join([f'{cfg.F_min[i]:.3f}, {float(cfg.F_max[i]):.3f}' for i in range(cfg.n_dim)]))
         features += [F]
         initial_info['F'] = F[cfg.n_timesteps]
 
-    if 'V' in keys:
+    if 'V' in cfg.node_features:
         V = transform(raw_data['V'], -1, 1, mean=cfg.V_mean)
-        print(f'V-Lims: {tuple((float(cfg.V_min[i]), float(cfg.V_max[i])) for i in range(cfg.n_dim))}')
+        print('V-lims: ' + ' | '.join([f'{cfg.V_min[i]:.3f}, {float(cfg.V_max[i]):.3f}' for i in range(cfg.n_dim)]))
         features += [V]
         initial_info['V'] = V[cfg.n_timesteps]
 
@@ -386,7 +358,6 @@ def load_andor_transform_data(cfg, raw_data=None):
     setattr(cfg, 'n_target_features', cfg.n_dim * n_nodes)
 
     if cfg.n_unroll_eval:
-        assert cfg.batch_size == 1
         setattr(cfg, 'initial_info', initial_info)
 
     return nodes

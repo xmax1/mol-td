@@ -1,21 +1,30 @@
 import os
 import pickle as pk
 import wandb
+import yaml
+import numpy as np
+from jax import numpy as jnp
+from distutils.util import strtobool
+from dataclasses import asdict
 
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import matplotlib.image as img
 from matplotlib.cm import get_cmap
-import yaml
 
 
-from distutils.util import strtobool
+def makedir_to_path(path):
+    dir_path = '/'.join(path.split('/')[:-1])
+    print(dir_path)
 
-from jax import numpy as jnp
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+        print(f'Making path {dir_path}')
 
 
-import yaml
+def makedir(path):
+    if not os.path.exists(path): 
+        os.makedirs(path)
 
 
 def yaml_to_dict(path):
@@ -24,9 +33,26 @@ def yaml_to_dict(path):
     return data
 
 
-def dict_to_yaml(data, path):
-    with open(path, 'w') as file:
-        yaml.safe_dump(data, file)
+def load_cfg(path):
+    with open(path, 'rb') as f:
+        cfg = pk.load(f)
+    return cfg
+
+
+def save_cfg(cfg, path):
+    makedir(path)
+    cfg = asdict(cfg)
+    save_pk(cfg, path  + '/cfg.pk')
+    cfg = {k:v for k,v in cfg.items() if type(v) in (str, int, float, tuple, bool)}
+    print(cfg)
+    with open(path  + '/cfg.yml', 'w') as file:
+        yaml.safe_dump(cfg, file)
+
+
+def save_params(params, path):  # path should already exist
+    n_files = len(os.listdir(path))
+    path = os.path.join(path, f'best_params{n_files}.pk')
+    save_pk(params, path)
 
 
 def accumulate_signals(storage, signal):
@@ -151,3 +177,75 @@ def load_pk(path):
 def print_dict(dictionary, name=''):
     new_dict = {k: v for k, v in dictionary.items() if type(v) in [int, float]}
     print(f'{name}: {str(new_dict)}')
+
+
+def snapshot_2d(cfg, im):
+    ms_base = 10
+
+    unique_species = np.unique(cfg.species)
+
+    fig, ax = plt.subplots()
+    ax.set_axis_off()
+    ax.grid(False)
+
+    for species in unique_species:
+        ms = ms_base * species
+        idxs = np.argwhere(species == cfg.species)
+        ax.plot(im[idxs, 0], im[idxs, 1], 'o', markersize=ms * 0.5)
+
+    ax.set_xlim([0, cfg.box_size])
+    ax.set_ylim([0, cfg.box_size])
+
+    fig.tight_layout(pad=0)
+    ax.margins(0)
+    canvas = FigureCanvasAgg(fig)  # from png # arr = img.imread('tmp.png') * 255
+    canvas.draw()
+    im = np.asarray(canvas.buffer_rgba()).astype(int)
+    plt.close()
+    return im
+
+from math import floor
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.colors as mcolors
+
+
+def create_animation_2d(cfg, arr, name='test.mp4', dpi=400):
+    '''
+    arr: (nt, n_nodes, n_dim)
+
+    '''
+    arr = cfg.untransform(arr, -1., 1., new_min=cfg.R_min, new_max=cfg.R_max, mean=cfg.R_mean)
+
+    frames = []
+    for im in arr:
+        im = snapshot_2d(cfg, im)
+        frames.append(im)
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_aspect('equal')
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    im = ax.imshow(frames[0], interpolation='nearest')
+    fig.set_size_inches([5,5])
+    fig.tight_layout()
+
+    def update_img(frame):
+        im.set_data(frame)
+        return im
+
+    ani = animation.FuncAnimation(fig, update_img, frames=frames[1:], interval=30)
+    writer = animation.writers['ffmpeg'](fps=30)
+
+    ani.save(name,writer=writer,dpi=dpi)
+    return ani
+
+
+
+
+
+
+
