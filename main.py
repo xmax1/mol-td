@@ -211,7 +211,7 @@ def evaluate(cfg,
             for k, v in val_rbfs.items():
                 difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
                 wandb.log({f'eval_rbf_{k}_l1norm': difference})
-    
+    data['z'] = cfg.nodes
     return data
 
 
@@ -320,7 +320,6 @@ if __name__ == '__main__':
             states = evaluate(cfg, warm_up_batch, cfg.n_unroll_eval, model, params, rng, rbfs=rbfs)
             print(states['R'].shape)
             [print(v.shape) for k, v in cfg.initial_info.items()]
-            states, _ = evaluate_positions[cfg.experiment](cfg, states['R'], cfg.initial_info)
             onp.savez(cfg.run_path + '/eval_positions.npz', **states)
 
             x = onp.load(cfg.run_path + '/eval_positions.npz')
