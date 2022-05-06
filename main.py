@@ -1,6 +1,7 @@
 
 from mol_td.signal_utils import compute_rdfs, compute_rdfs_all_unique_bonds
-from mol_td.utils import input_tuple, input_bool, accumulate_signals, filter_scalars, save_cfg, robust_dictionary_append
+from mol_td.utils import input_tuple, input_bool, accumulate_signals, filter_scalars, save_cfg
+from mol_td.utils_nojax import *
 from mol_td.utils import load_cfg, load_pk, save_params, makedir
 from mol_td.data_fns import create_dataloaders, load_andor_transform_data
 from mol_td import models

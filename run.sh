@@ -14,6 +14,8 @@ echo $cmd
 
 source ~/.bashrc
 
+module purge 
+
 module load GCC
 module load CUDA/11.4.1
 module load cuDNN
@@ -27,4 +29,4 @@ export OPENBLAS_NUM_THREADS=1
 
 cd /home/energy/amawi/projects/mol-td
 
-python train.py $cmd
+python main.py $cmd

@@ -40,14 +40,14 @@ hyperparameters = {
 
     '-d': ['md17/uracil_dft', ],
     
-    '-tag': ['compute_energy_test/uracil', ],
+    '-tag': ['compute_energy_test,uracil', ],
 }
 
 addendum = ' --wb -p TimeDynamics_v2 -g test'
 
 lists = [[f' {k} {str(v)}' for v in options] for k, options in hyperparameters.items()]
 
-cmds = [p for p in itertools.product(*list)]
+cmds = [p for p in itertools.product(*lists)]
 cmds = [" ".join(l) + addendum for l in cmds]
 
 run='./run.sh'

@@ -2,15 +2,17 @@ import os
 import pickle as pk
 import wandb
 import yaml
-import numpy as np
 from jax import numpy as jnp
+import numpy as np
 from distutils.util import strtobool
 from dataclasses import asdict
+from .utils_nojax import get_base_folder
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import matplotlib.image as img
 from matplotlib.cm import get_cmap
+import matplotlib.animation as animation
 
 
 def get_directory_leafs(path, target='cfg.pk'):
@@ -21,14 +23,6 @@ def get_directory_leafs(path, target='cfg.pk'):
         if target in files:
             leafs += [subdir]
     return leafs
-
-
-def get_base_folder(path):
-    if '.' in path:
-        base_folder = '/'.join(path.split('/')[:-1])
-    else:
-        base_folder = path
-    return base_folder
 
 
 def makedir_to_path(path):
@@ -222,12 +216,6 @@ def snapshot_2d(cfg, im):
     im = np.asarray(canvas.buffer_rgba()).astype(int)
     plt.close()
     return im
-
-from math import floor
-import matplotlib.animation as animation
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.colors as mcolors
 
 
 def create_animation_2d(cfg, arr, name='test.mp4', dpi=400):

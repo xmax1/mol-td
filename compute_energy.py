@@ -3,7 +3,7 @@ from gpaw import GPAW, PW
 
 import numpy as onp
 import argparse
-from .utils import get_base_folder, robust_dictionary_append
+from mol_td.utils_nojax import get_base_folder, robust_dictionary_append
 import os
 
 parser = argparse.ArgumentParser()
