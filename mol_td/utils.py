@@ -13,8 +13,26 @@ import matplotlib.image as img
 from matplotlib.cm import get_cmap
 
 
+def get_directory_leafs(path, target='cfg.pk'):
+    subdirs = [x[0] for x in os.walk(path)]
+    leafs = []
+    for subdir in subdirs:
+        files = os.listdir(subdir)
+        if target in files:
+            leafs += [subdir]
+    return leafs
+
+
+def get_base_folder(path):
+    if '.' in path:
+        base_folder = '/'.join(path.split('/')[:-1])
+    else:
+        base_folder = path
+    return base_folder
+
+
 def makedir_to_path(path):
-    dir_path = '/'.join(path.split('/')[:-1])
+    dir_path = get_base_folder(path)
     print(dir_path)
 
     if not os.path.exists(dir_path):
@@ -81,10 +99,11 @@ def input_bool(x):
     if x: return True
     else: return False
 
-def input_tuple(x):
-    x = str(x)
-    x = x.split(',')
-    x = tuple([i for i in x])
+def input_tuple(x, tuple_type='str'):
+    if tuple_type == 'str':
+        x = str(x)
+        x = x.split(',')
+        x = tuple([i for i in x])
     return x
 
 def get_sizes(data, zlim, new_min=2, new_max=200):
@@ -238,10 +257,20 @@ def create_animation_2d(cfg, arr, name='test.mp4', dpi=400):
         return im
 
     ani = animation.FuncAnimation(fig, update_img, frames=frames[1:], interval=30)
+    # writer = animation.PillowWriter(fps=30)
     writer = animation.writers['ffmpeg'](fps=30)
 
     ani.save(name,writer=writer,dpi=dpi)
     return ani
+
+
+def robust_dictionary_append(data, step_data):
+    for k, v in step_data.items():
+        if k in data.keys():
+            data[k] += [v[0]] if type(v) is list else [v]
+        else:
+            data[k] = [v[0]] if type(v) is list else [v]
+    return data
 
 
 

@@ -6,7 +6,7 @@ from typing import Tuple
 
 from .model_base import *
 from .model_latent import *
-from .config import Config, enc_dec
+from .config import Config
 
 encoders =  {'MLP': MLPEncoder,
             'GNN': GraphNetwork}
@@ -125,9 +125,7 @@ class HierarchicalTDVAE(nn.Module):
             prior_tmp['dist'] = tfd.Normal(prior_tmp['mean'], prior_tmp['std'])
             posterior_tmp['dist'] = tfd.Normal(posterior_tmp['mean'], posterior_tmp['std'])
         
-        
         y = self.decoder(posterior['z'], training=training, predict_sigma=self.cfg.predict_sigma)  # when not training, posterior = prior and when mean_trajectory 'z' = 'mean'
-        
         
         if self.cfg.predict_sigma:
             y, std = y
@@ -137,7 +135,7 @@ class HierarchicalTDVAE(nn.Module):
         if sketch: print('y shape: ', y.shape)
 
         likelihood = tfd.Normal(y, std)
-        y = likelihood.sample(seed=self.make_rng('sample'))
+        # y = likelihood.sample(seed=self.make_rng('sample'))
         
         nll = -self.cfg.beta * likelihood.log_prob(data_target).mean(0).sum()
         # nll = ((y - data_target)**2).mean(0).sum()

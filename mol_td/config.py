@@ -8,9 +8,9 @@ from datetime import datetime
 from math import ceil
 import os
 from .utils import md17_log_wandb_videos_or_images
-from .evaluation import evaluate_position_nve
+from .evaluation import evaluate_position_nve, evaluate_position_md17
 
-evaluate_positions = {'md17': None,
+evaluate_positions = {'md17': evaluate_position_md17,
                       'nve': evaluate_position_nve
 }
 
@@ -18,39 +18,39 @@ media_loggers = {'md17': md17_log_wandb_videos_or_images,
                  'nve': None
 }
 
-def compile_data(p, f, a,  flatten=False):
-    n_data, n_atom = p.shape[:2]
-    target = jnp.concatenate([p, f], axis=-1)
-    if flatten:
-        target = target.reshape(n_data, n_atom * 6)
-        data = jnp.concatenate([target, a], axis=-1)
-    else:
-        data = jnp.concatenate([p, f, a[..., None]], axis=-1)
-    return data, target
+# def compile_data(p, f, a,  flatten=False):
+#     n_data, n_atom = p.shape[:2]
+#     target = jnp.concatenate([p, f], axis=-1)
+#     if flatten:
+#         target = target.reshape(n_data, n_atom * 6)
+#         data = jnp.concatenate([target, a], axis=-1)
+#     else:
+#         data = jnp.concatenate([p, f, a[..., None]], axis=-1)
+#     return data, target
 
 
-def uncompile_data(data, y, n_atoms, unflatten=False):
-    n_data, nt = data.shape[:2]
-    if unflatten:
-        data = data.reshape(n_data, nt, n_atoms, -1)  # [..., :-n_atoms]
-        y = y.reshape(n_data, nt, n_atoms, -1)
-    data_r, data_f = data[..., :3], data[..., 3:6]
-    y_r, y_f = y[..., :3], y[..., 3:6]
-    return (data_r, data_f), (y_r, y_f)
+# def uncompile_data(data, y, n_atoms, unflatten=False):
+#     n_data, nt = data.shape[:2]
+#     if unflatten:
+#         data = data.reshape(n_data, nt, n_atoms, -1)  # [..., :-n_atoms]
+#         y = y.reshape(n_data, nt, n_atoms, -1)
+#     data_r, data_f = data[..., :3], data[..., 3:6]
+#     y_r, y_f = y[..., :3], y[..., 3:6]
+#     return (data_r, data_f), (y_r, y_f)
 
 
-enc_dec = {'MLP': {'n_features': lambda n_atoms: n_atoms * (3 + 3 + 1),
-                   'n_target_features': lambda n_atoms: n_atoms * (3 + 3),
-                   'compile_data': lambda p, f, a: compile_data(p, f, a, flatten=True), 
-                   'uncompile_data': lambda data, y, n_atoms: uncompile_data(data, y, n_atoms, unflatten=True)
-                  },
+# enc_dec = {'MLP': {'n_features': lambda n_atoms: n_atoms * (3 + 3 + 1),
+#                    'n_target_features': lambda n_atoms: n_atoms * (3 + 3),
+#                    'compile_data': lambda p, f, a: compile_data(p, f, a, flatten=True), 
+#                    'uncompile_data': lambda data, y, n_atoms: uncompile_data(data, y, n_atoms, unflatten=True)
+#                   },
 
-           'GCN': {'n_features': lambda n_atoms: (3 + 3 + 1),
-                   'n_target_features': lambda n_atoms: n_atoms * (3 + 3),
-                   'compile_data': lambda p, f, a: compile_data(p, f, a, flatten=False),
-                   'uncompile_data': lambda data, y, n_atoms: uncompile_data(data, y, n_atoms, unflatten=False)
-                   }
-}
+#            'GCN': {'n_features': lambda n_atoms: (3 + 3 + 1),
+#                    'n_target_features': lambda n_atoms: n_atoms * (3 + 3),
+#                    'compile_data': lambda p, f, a: compile_data(p, f, a, flatten=False),
+#                    'uncompile_data': lambda data, y, n_atoms: uncompile_data(data, y, n_atoms, unflatten=False)
+#                    }
+# }
 
 @dataclass
 class Config:
@@ -87,11 +87,11 @@ class Config:
     clockwork:              bool  = False
     mean_trajectory:        bool  = False
     predict_sigma:          bool  = False
-    node_features:          tuple = ('R', 'F', 'z')  # R=position, F=Force, z=atom_type
+    node_features:          tuple = None  # R=position, F=Force, z=atom_type, V=velocity
     edge_features:          tuple = ('r',)
     
-    graph_mlp_features:     int  = (10, 10)
-    graph_latent_size:      int  = 10
+    graph_mlp_features:     int  = None
+    graph_latent_size:      int  = None
 
     # DATA
     n_target:           int = None
@@ -103,6 +103,7 @@ class Config:
     run_path:           str = None
     n_unroll_eval:      int = 0
     split:              tuple = (0.7, 0.15, 0.15)
+    lag:                int = 1
 
     # SYSTEM
     r_cutoff:           float = 2.
@@ -142,7 +143,7 @@ class Config:
             self.load_model = os.path.join(self.experiment, self.load_model)
 
         if self.id is None:
-            self.id = datetime.now().strftime('%y%m%d%H%M%S')
+            self.id = datetime.now().strftime('%m%d_%H%M%S')
 
         if self.wb:
             self.wandb_status = 'online'
@@ -155,8 +156,23 @@ class Config:
         if self.n_eval_warmup is None:
             self.n_eval_warmup = max(8, int(0.25 * self.n_eval_timesteps))
 
-        if ('md17' != self.experiment):
+        # TODO change to experiment configuration files
+        if 'nve' == self.experiment:
+            print('NVE experiment')
             self.compute_rdfs = False
+            self.periodic = True
+            if self.node_features is None:
+                self.node_features = ('R', 'F', 'z', 'V')
+            self.box_size = 1.
+            self.r_cutoff = 0.35
+
+        elif 'md17' == self.experiment:
+            self.compute_rdfs = True
+            self.periodic = False
+            if self.node_features is None:
+                self.node_features = ('R', 'F', 'z')
+            self.box_size = 8.  # this needs to be 3x bigger than r_cutoff
+            self.r_cutoff = 2.
 
 
     def get_stats(self, data, axis=0):

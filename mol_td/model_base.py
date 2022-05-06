@@ -118,17 +118,17 @@ class MLPDecoder(nn.Module):
             z = activations[self.cfg.map_activation](nn.Dense(n_hidden)(z))
             z = nn.Dropout(rate=self.cfg.dropout)(z, deterministic=not training)  # https://github.com/google/flax/issues/1004
         
-        if predict_sigma:
-            mean = nn.Dense(self.cfg.dec_hidden[-1])(z)
-            # std = jnn.softplus(nn.Dense(self.cfg.dec_hidden[-1])(z + 0.54)) + self.cfg.latent_dist_min_std
-            std = jnn.softplus(nn.Dense(1)(z + 0.54)) + self.cfg.latent_dist_min_std
-
-            # z = (mean.reshape((bs, nt, self.cfg.n_atoms, 3)), std.reshape((bs, nt, self.cfg.n_atoms, 3)))
-            z = (mean.reshape((bs, nt, -1, self.cfg.n_dim)), std.reshape((bs, nt, 1, 1)))
+        mean = nn.Dense(self.cfg.dec_hidden[-1])(z).reshape((bs, nt, -1, self.cfg.n_dim))
+        if self.cfg.periodic:
+            z = jnn.sigmoid(mean)
         else:
-            z = jnp.tanh(nn.Dense(self.cfg.dec_hidden[-1])(z))  # values in dataset restricted between 1 and -1
-            z = z.reshape((bs, nt, -1, self.cfg.n_dim))
-        return z
+            z = jnp.tanh(mean)
+        if predict_sigma:
+            std = jnn.softplus(nn.Dense(1)(z + 0.54)) + self.cfg.latent_dist_min_std
+            std = std.reshape((bs, nt, 1, 1))
+            return z, std
+        else:
+            return z
 
 
 class GNNEncoder(nn.Module):

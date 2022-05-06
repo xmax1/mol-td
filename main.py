@@ -1,6 +1,6 @@
 
 from mol_td.signal_utils import compute_rdfs, compute_rdfs_all_unique_bonds
-from mol_td.utils import input_tuple, input_bool, accumulate_signals, filter_scalars, save_cfg
+from mol_td.utils import input_tuple, input_bool, accumulate_signals, filter_scalars, save_cfg, robust_dictionary_append
 from mol_td.utils import load_cfg, load_pk, save_params, makedir
 from mol_td.data_fns import create_dataloaders, load_andor_transform_data
 from mol_td import models
@@ -19,6 +19,7 @@ import numpy as onp
 
 import argparse
 from typing import Callable
+from datetime import date
 
 from dataclasses import dataclass
 
@@ -28,7 +29,9 @@ def train(cfg,
           params, 
           rng,
           train_loader,
-          val_loader=None):
+          val_loader=None,
+          test_loader=None,
+          rbfs=None):
 
     tx = optax.adam(learning_rate=cfg.lr)
     opt_state = tx.init(params)
@@ -103,22 +106,9 @@ def train(cfg,
                           'val_posterior_y': val_posterior_y,
                           'tr_ground_truth': tr_signal['data_target'],
                           'tr_posterior_y': tr_signal['y_r']}
-            
-            # positions = jnp.concatenate(signals['y'], axis=0).reshape(-1, cfg.n_nodes, 3)
 
             if media_loggers[cfg.experiment] is not None:
                 media_loggers[cfg.experiment](media_logs, cfg, n_batch=1)
-
-            # if cfg.compute_rdfs:
-            #     val_rbfs = compute_rdfs(cfg.atoms, configurations, mode='all_unique_bonds')
-            #     for k, v in val_rbfs.items():
-            #         table = wandb.Table(data=v, columns = ["x", "y"])
-            #         name = f'val_rbf_{k}'
-            #         wandb.log({name : wandb.plot.line(table, "x", "y", title=name)})
-
-            #     for k, v in val_rbfs.items():
-            #         difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
-            #         wandb.log({f'rbf_{k}_l1norm': difference})
 
             # if cfg.compute_energy is not None:
             #     energies = cfg.compute_energy(configurations)
@@ -132,9 +122,33 @@ def train(cfg,
         if ref_error < best_error:
             best_error = ref_error
             best_params = params
-    
+
     save_params(best_params, cfg.run_path)
 
+    if test_loader is not None:
+        signals = {}
+        for test_batch in test_loader:
+            test_loss_batch, test_signal, rng = validation_step(best_params, test_batch, rng)
+            signals = accumulate_signals(signals, test_signal)
+        signal = filter_scalars(signals, n_batch=len(val_loader), tag='test_')
+
+        positions = jnp.concatenate(signals['y'], axis=0).reshape(-1, cfg.n_nodes, 3)
+
+        for k, v in signal.items():
+            wandb.summary[k] = v 
+
+        if cfg.compute_rdfs:
+            val_rbfs = compute_rdfs(cfg.nodes, positions, mode='all_unique_bonds')
+            for k, v in val_rbfs.items():
+                table = wandb.Table(data=v, columns = ["x", "y"])
+                name = f'test_rbf_{k}'
+                wandb.log({name : wandb.plot.line(table, "x", "y", title=name)})
+
+            if rbfs is not None:
+                for k, v in val_rbfs.items():
+                    difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
+                    wandb.log({f'rbf_{k}_l1norm': difference})
+    
 
 @dataclass
 class state:
@@ -145,7 +159,13 @@ class state:
     nodes: None
 
 
-def evaluate(cfg, warm_up_batch, n_unroll, model, params, rng):
+def evaluate(cfg, 
+             warm_up_batch, 
+             n_unroll, 
+             model, 
+             params, 
+             rng, 
+             rbfs=None):
 
     rng, sample_rng, dropout_rng = rnd.split(rng, 3)
 
@@ -169,15 +189,28 @@ def evaluate(cfg, warm_up_batch, n_unroll, model, params, rng):
         return val_loss_batch, val_signal, rng
 
     initial_info = cfg.initial_info
-    data = {'R': [], 'F': [], 'V': [], 'KE': [], 'PE': [], 'TE': []}
+    data = {}
     for i in range(n_unroll):
         val_loss_batch, val_signal, rng = unroll_step(params, warm_up_batch, latent_states, rng)
         latent_states = val_signal['latent_states']
         step_data, initial_info = evaluate_positions[cfg.experiment](cfg, val_signal['y'], initial_info)
-        for k, v in step_data.items():
-            data[k].append(v[0] if type(v) is list else v)
+        data = robust_dictionary_append(data, step_data)
+
     print(type(data['R']), len(data['R']), type(data['R'][0]), type(data['R'][1]))
-    data = {k:jnp.stack(v, axis=0) for k, v in data.items()}
+    data = {k:jnp.concatenate(v, axis=0) for k, v in data.items()}
+
+    if cfg.compute_rdfs:
+        val_rbfs = compute_rdfs(cfg.nodes, data['R'].reshape(-1, cfg.n_nodes, 3), mode='all_unique_bonds')
+        for k, v in val_rbfs.items():
+            table = wandb.Table(data=v, columns = ["x", "y"])
+            name = f'eval_rbf_{k}'
+            wandb.log({name : wandb.plot.line(table, "x", "y", title=name)})
+
+        if rbfs is not None:
+            for k, v in val_rbfs.items():
+                difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
+                wandb.log({f'eval_rbf_{k}_l1norm': difference})
+    
     return data
 
 
@@ -187,13 +220,13 @@ if __name__ == '__main__':
 
     parser.add_argument('-d', '--dataset', default='md17/uracil_dft', type=str)
     parser.add_argument('-rp', '--run_path', default=None, type=str)
-    parser.add_argument('-nf', '--node_features', default=('R', 'F', 'z', 'V'))
+    parser.add_argument('-nf', '--node_features', default=None, type=input_tuple)
 
     parser.add_argument('--wb', action='store_true')
     parser.add_argument('-i', '--id', default=None, type=str)
-    parser.add_argument('-p', '--project', default='TimeDynamics', type=str)
+    parser.add_argument('-p', '--project', default='TimeDynamics_v2', type=str)
     parser.add_argument('-g', '--group', default='junk', type=str)
-    parser.add_argument('-tag', '--tag', default='no_tag', type=str)
+    parser.add_argument('-tag', '--tag', default=['no_tag',], type=input_tuple)
     parser.add_argument('--xlog_media', action='store_true')
 
     parser.add_argument('-m', '--model', default='HierarchicalTDVAE', type=str)
@@ -205,27 +238,28 @@ if __name__ == '__main__':
     parser.add_argument('-new', '--n_eval_warmup', default=None, type=int)
 
     parser.add_argument('-nenc', '--n_enc_layers', default=1, type=int)
-    parser.add_argument('-ndec', '--n_dec_layers', default=2, type=int)
-    parser.add_argument('-tl', '--n_transfer_layers', default=2, type=int)
+    parser.add_argument('-ndec', '--n_dec_layers', default=1, type=int)
+    parser.add_argument('-tl', '--n_transfer_layers', default=1, type=int)
     parser.add_argument('-ne', '--n_embed', default=40, type=int)
+    parser.add_argument('-rcut', '--r_cutoff', default=0.5, type=float)
     parser.add_argument('-nl', '--n_latent', default=1, type=int)
+    parser.add_argument('-drop', '--dropout', default=0.5, type=float)
     parser.add_argument('-ystd', '--y_std', default=0.01, type=float)
     parser.add_argument('-b', '--beta', default=1., type=float)
     parser.add_argument('-lp', '--likelihood_prior', default=False, type=input_bool)
     parser.add_argument('-cw', '--clockwork', default=False, type=input_bool)
     parser.add_argument('-mj', '--mean_trajectory', default=False, type=input_bool)
-    parser.add_argument('-nue', '--n_unroll_eval', default=0, type=int)
+    parser.add_argument('-nue', '--n_unroll_eval', default=100, type=int)
+    parser.add_argument('-lag', '--lag', default=1, type=int)
 
-    parser.add_argument('-e', '--n_epochs', default=2, type=int)
-    parser.add_argument('-bs', '--batch_size', default=32, type=int)
-    parser.add_argument('-s', '--split', default=(0.8, 0.2, 0.0), type=input_tuple)
+    parser.add_argument('-e', '--n_epochs', default=100, type=int)
+    parser.add_argument('-bs', '--batch_size', default=64, type=int)
+    parser.add_argument('-s', '--split', default=(0.7, 0.15, 0.15), type=input_tuple)
     parser.add_argument('-lr', '--lr', default=0.001, type=float)
 
     args = parser.parse_args()
 
     args = vars(args)
-
-    from datetime import date
 
     today = date.today().strftime("%m%d")
 
@@ -236,16 +270,16 @@ if __name__ == '__main__':
     cfg = Config(**args)
 
     run = wandb.init(project=cfg.project, 
-                    #  id=cfg.id, 
+                     name=cfg.id, 
                      entity=cfg.user, 
                      config=asdict(cfg),
                      mode=cfg.wandb_status,
                      group=cfg.group,
-                     tags=[cfg.tag,])
+                     tags=cfg.tag)
 
-    data = load_andor_transform_data(cfg)
+    data, targets = load_andor_transform_data(cfg)
     
-    train_loader, val_loader, test_loader = create_dataloaders(cfg, data, split=cfg.split, shuffle=not bool(cfg.n_unroll_eval))  # False if 0
+    train_loader, val_loader, test_loader = create_dataloaders(cfg, data, targets, split=cfg.split, shuffle=not bool(cfg.n_unroll_eval))  # False if 0
 
     cfg.initialise_model_hype()
 
@@ -255,9 +289,10 @@ if __name__ == '__main__':
     params = model.init(dict(params=params_rng, sample=sample_rng, dropout=dropout_rng), ex_batch, training=True, sketch=True)
 
     if cfg.run_path is not None:
-        params = load_pk(args['run_path'] + f'/best_params{len(os.listdir(args["run_path"]))}.pk')
+        params = load_pk(args['run_path'] + f'/best_params.pk')  # {len(os.listdir(args["run_path"]))}
     else:
-        run_dir = os.path.join('./log', cfg.experiment, today)
+        experiment_group = today if cfg.tag is None else '/'.join(cfg.tag)
+        run_dir = os.path.join('./log', cfg.experiment, experiment_group)
         if cfg.id is not None: run_dir += f'/{cfg.id}'
         makedir(run_dir)
         cfg.run_path = os.path.join(run_dir, f'run{len(os.listdir(run_dir))}')
@@ -266,23 +301,30 @@ if __name__ == '__main__':
     save_cfg(cfg, cfg.run_path)
         
     with run:
-        # if cfg.compute_rdfs:
-        #     rbfs = compute_rdfs(cfg.atoms, data[..., :cfg.n_dim], mode='all_unique_bonds')
-        #     for k, v in rbfs.items():
-        #         table = wandb.Table(data=v, columns = ["x", "y"])
-        #         name = f'tr_rbf_{k}'
-        #         wandb.log({name : wandb.plot.line(table, "x", "y", title=name)})
+        if cfg.compute_rdfs:
+            rbfs = compute_rdfs(cfg.nodes, targets, mode='all_unique_bonds')
+            for k, v in rbfs.items():
+                table = wandb.Table(data=v, columns = ["x", "y"])
+                name = f'tr_rbf_{k}'
+                wandb.log({name : wandb.plot.line(table, "x", "y", title=name)})
+        else:
+            rbfs = None
 
-        if not cfg.n_unroll_eval:
-            train(cfg, model, params, rng, train_loader, val_loader=val_loader)
+        if train_loader is not None:
+            train(cfg, model, params, rng, train_loader, val_loader=val_loader, test_loader=test_loader, rbfs=rbfs)
         
-        else:      
+        if cfg.n_unroll_eval:
+            train_loader.shuffle()
             warm_up_batch = next(train_loader)  # trainloader is simpler because it doesn't have the eval warmup
-            states = evaluate(cfg, warm_up_batch, cfg.n_unroll_eval, model, params, rng)
+            states = evaluate(cfg, warm_up_batch, cfg.n_unroll_eval, model, params, rng, rbfs=rbfs)
             print(states['R'].shape)
             [print(v.shape) for k, v in cfg.initial_info.items()]
-            states = evaluate_positions[cfg.experiment](cfg, states['R'], cfg.initial_info)
-            onp.savez(cfg.run_path + '/results.npz', states)
+            states, _ = evaluate_positions[cfg.experiment](cfg, states['R'], cfg.initial_info)
+            onp.savez(cfg.run_path + '/eval_positions.npz', **states)
+
+            x = onp.load(cfg.run_path + '/eval_positions.npz')
+            print(list(x.keys()))
+            [print(v.shape) for k, v in x.items()]
 
             
             

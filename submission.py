@@ -62,6 +62,7 @@ if user_input == 'c':
 if user_input == 'y':
     os.system(f'sbatch --array=0-{len(cmds)-1}%20  ./run.sh')
 
+
 # cmds = []
 # for t in ts:
 #     for nt in nts:
