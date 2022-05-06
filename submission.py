@@ -25,20 +25,30 @@ import itertools
 # parser.add_argument('-bs', '--batch_size', default=128, type=int)
 # parser.add_argument('-lr', '--lr', default=0.001, type=float)
 
-ts=('-t GRU', '-t LSTM')
-els=('-nenc 1 -ndec 1', '-nenc 2 -ndec 2', '-nenc 3 -ndec 3')
-nes=('-ne 20', '-ne 40')
-nls=('-nl 1', '-nl 2', '-nl 3')
-cws=('-cw True', '-cw False')
-mjs=('-mj True', )
-ystds=('-ystd 0.005', '-ystd 0.01', '-ystd 0.05', '-ystd 0.1')
-bss=('-bs 128', )
-tag=('-tag no_tag', )
-other=('--wb -p TimeDynamics -g mvp', )
+hyperparameters = {
+    '-t': ['GRU',],  # LSTM
+    '-nenc': [1,],
+    '-ndec': [1,],
+    '-ne': [20,],
+    '-nl': [1,],
+    '-cw': ['True',],  # clockwork
+    '-mj': ['False',],  # mean trajectory
+    '-ystd': [0.01,],
+    '-bs': [64,],
+    '-lag': [1,],
+    '-e': [10,],  # epochs
 
-list = [ts, els, nes, nls, mjs, ystds, bss, cws, tag, other]
+    '-d': ['md17/uracil_dft', ],
+    
+    '-tag': ['compute_energy_test/uracil', ],
+}
+
+addendum = ' --wb -p TimeDynamics_v2 -g test'
+
+lists = [[f' {k} {str(v)}' for v in options] for k, options in hyperparameters.items()]
+
 cmds = [p for p in itertools.product(*list)]
-cmds = [" ".join(l) for l in cmds]
+cmds = [" ".join(l) + addendum for l in cmds]
 
 run='./run.sh'
 

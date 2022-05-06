@@ -1,7 +1,7 @@
 
 # folders
 data/ 
-results/
+log/
 */wandb/
 /wandb
 
