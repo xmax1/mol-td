@@ -141,10 +141,10 @@ class MLPTransfer(nn.Module):
 
         posterior = self.posterior(s_posterior_t0) if use_obs else prior
 
-        posterior['context'] = jnp.concatenate([posterior['z'], cell_out], axis=-1)
-        
         if mean_trajectory: 
             posterior['z'] = posterior['mean']
+
+        posterior['context'] = jnp.concatenate([posterior['z'], cell_out], axis=-1)
 
         next_state = dict(z=posterior['z'],
                           carry=carry,

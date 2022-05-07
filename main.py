@@ -165,7 +165,6 @@ def train(cfg,
         dts = jnp.stack(signals['mean_dts']).mean(0)
         idxs = jnp.argsort(dts)
         # print(signals['latent_covs'])
-        print(dts.shape)
         latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
         latent_covs = [lc[idxs] for lc in latent_covs]
 
@@ -180,6 +179,8 @@ def train(cfg,
             plt.ylabel('latent')
             # fig = wandb.plot.HeatMap(onp.arange(1, lc.shape[0]+1), onp.arange(1, lc.shape[1]+1), lc, show_text=False)
             wandb.log({f'latent_covs_{i}': fig })
+
+    return best_params
             
     
 
@@ -207,8 +208,6 @@ def evaluate(cfg,
                       mean_trajectory=cfg.mean_trajectory, 
                       rngs=dict(sample=sample_rng, dropout=dropout_rng))
     val_loss_batch, val_signal = val_fwd(params, warm_up_batch)
-
-    latent_states = val_signal['latent_states']
     
     @jit
     def unroll_step(params, batch, latent_states, rng):
@@ -222,18 +221,19 @@ def evaluate(cfg,
         return val_loss_batch, val_signal, rng
 
     initial_info = cfg.initial_info
+    
     data = {}
     for i in range(n_unroll):
-        val_loss_batch, val_signal, rng = unroll_step(params, warm_up_batch, latent_states, rng)
-        latent_states = val_signal['latent_states']
+        val_loss_batch, val_signal, rng = unroll_step(params, warm_up_batch, val_signal['latent_states'], rng)
         step_data, initial_info = evaluate_positions[cfg.experiment](cfg, val_signal['y'], initial_info)
         data = robust_dictionary_append(data, step_data)
 
-    print(type(data['R']), len(data['R']), type(data['R'][0]), type(data['R'][1]))
-    data = {k:jnp.concatenate(v, axis=0) for k, v in data.items()}
+    data = {k:jnp.concatenate(v, axis=1) for k, v in data.items()}
+    video = data['R'][:, :100, ...]
+    data['R'] = data['R'].reshape(-1, *data['R'].shape[2:])
 
     if cfg.compute_rdfs:
-        val_rbfs = compute_rdfs(cfg.nodes, data['R'].reshape(-1, cfg.n_nodes, 3), mode='all_unique_bonds')
+        val_rbfs = compute_rdfs(cfg.nodes, data['R'], mode='all_unique_bonds')
         for k, v in val_rbfs.items():
             table = wandb.Table(data=v, columns = ["x", "y"])
             name = f'eval_rbf_{k}'
@@ -243,6 +243,10 @@ def evaluate(cfg,
             for k, v in val_rbfs.items():
                 difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
                 wandb.log({f'eval_rbf_{k}_l1norm': difference})
+    
+    if media_loggers[cfg.experiment] is not None:
+        media_loggers[cfg.experiment]({'eval_generation': video}, cfg, n_batch=1, fps=4)
+
     data['z'] = cfg.nodes
     return data
 
@@ -266,8 +270,8 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--transfer_fn', default='GRU', type=str)
     parser.add_argument('-enc', '--encoder', default='GNN', type=str)  # GCN for graph, MLP for line
     parser.add_argument('-dec', '--decoder', default='MLP', type=str)  # GCN for graph, MLP for line
-    parser.add_argument('-nt', '--n_timesteps', default=4, type=int)
-    parser.add_argument('-net', '--n_eval_timesteps', default=4, type=int)
+    parser.add_argument('-nt', '--n_timesteps', default=8, type=int)
+    parser.add_argument('-net', '--n_eval_timesteps', default=8, type=int)
     parser.add_argument('-new', '--n_eval_warmup', default=None, type=int)
 
     parser.add_argument('-nenc', '--n_enc_layers', default=1, type=int)
@@ -344,7 +348,7 @@ if __name__ == '__main__':
             rbfs = None
 
         if train_loader is not None:
-            train(cfg, model, params, rng, train_loader, val_loader=val_loader, test_loader=test_loader, rbfs=rbfs)
+            params = train(cfg, model, params, rng, train_loader, val_loader=val_loader, test_loader=test_loader, rbfs=rbfs)
         
         if cfg.n_unroll_eval:
             train_loader.shuffle()

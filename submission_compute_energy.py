@@ -9,5 +9,5 @@ for path in leafs:
     dataset = os.path.join(path, 'eval_positions.npz')
     if 'eval_positions.npz' in os.listdir(path):
         print(f'Running: {dataset}')
-        os.system(f'sbatch  ./run_compute_energy.sh {dataset}')
+        os.system(f'sbatch ./run_compute_energy.sh {dataset}')
 

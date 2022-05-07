@@ -10,7 +10,7 @@ from jax_md import space, smap, energy, minimize, quantity, simulate
 
 
 def evaluate_position_md17(cfg, positions, initial_info):
-    return {'R': positions.reshape(-1, *positions.shape[2:]),}, {}  
+    return {'R': positions,}, {}  
 
 
 def evaluate_position_nve(cfg, positions, initial_info, print_every=20):
