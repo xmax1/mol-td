@@ -24,6 +24,8 @@ from datetime import date
 
 from dataclasses import dataclass
 
+import matplotlib.pyplot as plt
+
 
 def train(cfg, 
           model,
@@ -108,6 +110,16 @@ def train(cfg,
                           'tr_ground_truth': tr_signal['data_target'],
                           'tr_posterior_y': tr_signal['y_r']}
 
+            if cfg.n_latent > 1:
+                dts = jnp.stack(signals['mean_dts']).mean(0)
+                idxs = jnp.argsort(dts)
+                latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
+                dtwms = [jnp.dot(dts, jnp.abs(lc[idxs]).mean(-1)) for lc in latent_covs]
+
+                for i, dtwm in enumerate(dtwms):
+                    wandb.log({f"latent_{i}_dt_wmean_cov" : dtwm})
+
+
             if media_loggers[cfg.experiment] is not None:
                 media_loggers[cfg.experiment](media_logs, cfg, n_batch=1)
 
@@ -149,6 +161,26 @@ def train(cfg,
                 for k, v in val_rbfs.items():
                     difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
                     wandb.log({f'rbf_{k}_l1norm': difference})
+
+        dts = jnp.stack(signals['mean_dts']).mean(0)
+        idxs = jnp.argsort(dts)
+        # print(signals['latent_covs'])
+        print(dts.shape)
+        latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
+        latent_covs = [lc[idxs] for lc in latent_covs]
+
+        data = [[x, y] for (x, y) in zip(range(dts.shape[-1]), dts[idxs]) ]
+        table = wandb.Table(data=data, columns = ["x", "y"])
+        wandb.log({"dts" : wandb.plot.line(table, "x", "y", title="dts")})
+
+        for i, lc in enumerate(latent_covs):
+            fig = plt.figure()
+            plt.imshow(lc, interpolation = 'nearest', cmap="summer")
+            plt.xlabel('embedding')
+            plt.ylabel('latent')
+            # fig = wandb.plot.HeatMap(onp.arange(1, lc.shape[0]+1), onp.arange(1, lc.shape[1]+1), lc, show_text=False)
+            wandb.log({f'latent_covs_{i}': fig })
+            
     
 
 @dataclass

@@ -36,6 +36,32 @@ def compute_da(data, y):
     return jnp.mean(jnp.sum(yr*datar, axis=-1)), jnp.mean(datal / yl)
 
 
+def compute_dts(embedding):
+    '''
+    embedding: (n_batch, n_timesteps, n_latent_dim)
+    '''
+    dts = jnp.absolute(embedding[:, 1:, ...] - embedding[:, :-1, ...])
+    mean_dts = jnp.mean(dts, axis=(0, 1))
+    std_dts = jnp.std(dts, axis=(0, 1))
+    return mean_dts, std_dts
+
+
+def compute_latent_covs(embedding, priors):
+    nt_emb = embedding.shape[1]
+    covs = []
+    for prior in priors:
+        mean = prior['mean']
+        nt_prior = mean.shape[1]
+        jump = nt_emb // nt_prior
+        embedding_tmp = embedding[:, ::jump, :]
+        embedding_tmp = jnp.transpose(embedding_tmp.reshape(-1, embedding_tmp.shape[-1]))
+        n_data = embedding_tmp.shape[-1]
+        mean = mean.reshape(n_data, -1)
+        cov = jnp.dot(embedding_tmp, mean) / n_data
+        covs += [cov]
+    return jnp.stack(covs, axis=0)
+
+
 
 class HierarchicalTDVAE(nn.Module):
 
@@ -64,6 +90,7 @@ class HierarchicalTDVAE(nn.Module):
                   'Target shape: ', data_target.shape)
 
         embedding = self.encoder(data, training=training)
+        encoder_embedding = embedding
 
         embeddings = []
         for ladder, dropout in zip(self.ladder, self.dropout):
@@ -151,6 +178,13 @@ class HierarchicalTDVAE(nn.Module):
         directional_accuracy, step_size_accuracy = compute_da(data_target, y)
         y_std = jnp.mean(jnp.std(y, axis=0))
 
+
+        if not training:
+            mean_dts, std_dts = compute_dts(encoder_embedding)
+            latent_covs = compute_latent_covs(encoder_embedding, priors)
+        else:
+            mean_dts, std_dts, latent_covs = None, None, None
+
         signal = dict(posterior_std=posterior['std'].mean(),
                       loss=loss,
                       kl_div=kl_div, 
@@ -165,7 +199,10 @@ class HierarchicalTDVAE(nn.Module):
                       y_std=y_std,
                       latent_states=next_latent_states,
                       directional_accuracy=directional_accuracy,
-                      step_size_accuracy=step_size_accuracy)
+                      step_size_accuracy=step_size_accuracy,
+                      mean_dts=mean_dts,
+                      std_dts=std_dts,
+                      latent_covs=latent_covs)
 
         return loss, signal
 
