@@ -15,6 +15,13 @@ from matplotlib.cm import get_cmap
 import matplotlib.animation as animation
 
 
+
+def untransform(data, old_min, old_max, new_min=-1, new_max=1, mean=None):
+    data = ((data - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
+    # if mean is not None:
+    #     data = data + mean
+    return data
+
 def get_directory_leafs(path, target='cfg.pk'):
     subdirs = [x[0] for x in os.walk(path)]
     leafs = []
@@ -155,7 +162,7 @@ def md17_log_wandb_videos_or_images(data, cfg, n_batch=10, fps=2):
     for k, arr in data.items():
         n_dim = len(arr.shape)  # (bs, nt, natom, 3)
         arr = arr[:n_batch]   # (bs, nt, natom, 3)
-        arr = cfg.untransform(arr, -1., 1., new_min=cfg.R_min, new_max=cfg.R_max, mean=cfg.R_mean)
+        arr = untransform(arr, -1., 1., new_min=cfg.R_min, new_max=cfg.R_max, mean=cfg.R_mean)
         sizes = get_sizes(arr[..., -1], cfg.R_lims[-1])  
 
         if n_dim == 3:
@@ -201,9 +208,9 @@ def snapshot_2d(cfg, im):
     ax.set_axis_off()
     ax.grid(False)
 
-    for species in unique_species:
-        ms = ms_base * species
-        idxs = np.argwhere(species == cfg.species)
+    for spec in unique_species:
+        ms = ms_base * spec
+        idxs = np.argwhere(spec == cfg.species)
         ax.plot(im[idxs, 0], im[idxs, 1], 'o', markersize=ms * 0.5)
 
     ax.set_xlim([0, cfg.box_size])
@@ -218,38 +225,58 @@ def snapshot_2d(cfg, im):
     return im
 
 
-def create_animation_2d(cfg, arr, name='test.mp4', dpi=400):
+
+
+
+def create_animation_2d(data, cfg, n_batch=1, name='test.mp4', fps=4, dpi=400, use_wandb=True):
     '''
     arr: (nt, n_nodes, n_dim)
 
     '''
-    arr = cfg.untransform(arr, -1., 1., new_min=cfg.R_min, new_max=cfg.R_max, mean=cfg.R_mean)
 
-    frames = []
-    for im in arr:
-        im = snapshot_2d(cfg, im)
-        frames.append(im)
-    
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_aspect('equal')
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
+    logs = {}
+    for name, arr in data.items():
+        arr = arr[:n_batch]  # if 1 then keeps the first dim
+        if not len(arr.shape) == 3:
+            arr = jnp.squeeze(arr)
+        arr = untransform(arr, 0., 1., new_min=cfg.R_min, new_max=cfg.R_max, mean=cfg.R_mean)
 
-    im = ax.imshow(frames[0], interpolation='nearest')
-    fig.set_size_inches([5,5])
-    fig.tight_layout()
+        frames = []
+        for im in arr:
+            im = snapshot_2d(cfg, im)
+            frames.append(im)
+        
+        
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.set_aspect('equal')
+        # ax.get_xaxis().set_visible(False)
+        # ax.get_yaxis().set_visible(False)
 
-    def update_img(frame):
-        im.set_data(frame)
-        return im
+        # im = ax.imshow(frames[0], interpolation='nearest')
+        # fig.set_size_inches([5,5])
+        # fig.tight_layout()
 
-    ani = animation.FuncAnimation(fig, update_img, frames=frames[1:], interval=30)
-    # writer = animation.PillowWriter(fps=30)
-    writer = animation.writers['ffmpeg'](fps=30)
+        def update_img(frame):
+            im.set_data(frame)
+            return im
 
-    ani.save(name,writer=writer,dpi=dpi)
-    return ani
+        # ani = animation.FuncAnimation(fig, update_img, frames=frames[1:], interval=30)
+        # print(ani)
+        # writer = animation.PillowWriter(fps=30)
+        # writer = animation.writers['ffmpeg'](fps=30)
+
+        # ani.save(cfg.run_path + '/' + name+'.gif', writer=writer, dpi=dpi)
+        frames = np.array(frames)
+
+        if use_wandb:
+            media = wandb.Video(np.transpose(frames, (0, 3, 1, 2)), fps=fps)
+            logs[name] = media
+
+    if use_wandb:
+        wandb.log(logs)
+
+    return 
 
 
 def robust_dictionary_append(data, step_data):

@@ -59,21 +59,27 @@ class GraphNetwork(nn.Module):
     # Add a global parameter for graph classification.
     graph = graph._replace(globals=jnp.zeros([graph.n_node.shape[0], 1]))
 
+    print('Graph latent size: ', self.cfg.graph_latent_size)
+    print('Graph mlp size', self.cfg.graph_mlp_features)
+    
     if self.cfg.edge_features is not None:
-      embed_edge_fn = make_embed_fn(self.cfg.graph_latent_size)
-      update_edge_fn = make_mlp(self.cfg.graph_mlp_features)
+      embed_edge_fn = make_embed_fn(8)
+      update_edge_fn = make_mlp((8, 8))
     else:
       embed_edge_fn = None
       update_edge_fn = None
     
     embedder = jraph.GraphMapFeatures(
         embed_node_fn=make_embed_fn(self.cfg.graph_latent_size),
-        embed_edge_fn=embed_edge_fn,)
+        embed_edge_fn=embed_edge_fn
+        )
         # embed_global_fn=make_embed_fn(self.latent_size))
     
     net = jraph.GraphNetwork(
         update_node_fn=make_mlp(self.cfg.graph_mlp_features),
-        update_edge_fn=update_edge_fn)
+        update_edge_fn=update_edge_fn
+        )
+
         # aggregate_edges_for_globals_fn=utils.segment_mean)
         # The global update outputs size 2 for binary classification.
         # update_global_fn=make_mlp(self.mlp_features + (2,)))  # pytype: disable=unsupported-operands
@@ -116,7 +122,7 @@ class MLPDecoder(nn.Module):
         bs, nt = z.shape[:2]
         for n_hidden in self.cfg.dec_hidden: # the first contains the feature dimension
             z = activations[self.cfg.map_activation](nn.Dense(n_hidden)(z))
-            z = nn.Dropout(rate=self.cfg.dropout)(z, deterministic=not training)  # https://github.com/google/flax/issues/1004
+            # z = nn.Dropout(rate=self.cfg.dropout)(z, deterministic=not training)  # https://github.com/google/flax/issues/1004
         
         mean = nn.Dense(self.cfg.dec_hidden[-1])(z).reshape((bs, nt, -1, self.cfg.n_dim))
         if self.cfg.periodic:

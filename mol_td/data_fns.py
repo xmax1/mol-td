@@ -179,8 +179,6 @@ class DataLoader():
         self.receivers_idx = cfg.receivers_idx
         self.senders_idx = cfg.senders_idx
         self.r_cutoff = cfg.r_cutoff
-        self.capacity_multiplier = 1.
-        self.box_size = 8.
         self.dr_threshold = cfg.dr_threshold
         self.batch_size = cfg.batch_size
         self.n_eval_timesteps = cfg.n_eval_timesteps
@@ -235,7 +233,7 @@ class DataLoader():
         idxs = (self._order[start:stop],)
 
         if self._create_graphs is None:
-            self._create_graphs = self.allocate_neighbor_list(self.targets[0, 0])
+            self._create_graphs = self.allocate_neighbor_list(self.targets[(0, 0)])
 
         if self._fin < len(self):
             
@@ -243,22 +241,23 @@ class DataLoader():
                 nodes = self.nodes[idxs]
                 target = self.targets[idxs]
                 if self.nbrs.did_buffer_overflow:
-                    self._create_graphs = self.allocate_neighbor_list(target[0, 0]) 
+                    self._create_graphs = self.allocate_neighbor_list(target[(0, 0)]) 
                 
                 graphs = self._create_graphs(nodes, target)
+
                 return graphs, target
             else:
                 nodes = self.nodes[idxs]
                 target = self.targets[idxs]
                 if self.nbrs.did_buffer_overflow:
-                    self._create_graphs = self.allocate_neighbor_list(target[0, 0]) 
+                    self._create_graphs = self.allocate_neighbor_list(target[(0, 0)]) 
 
                 nodes_warmup, nodes_eval = jnp.split(nodes, [nodes.shape[1]-self.n_eval_timesteps,], axis=1)
                 target_warmup, target_eval = jnp.split(target, [nodes.shape[1]-self.n_eval_timesteps,], axis=1)
                 
                 graphs_warmup = self._create_graphs(nodes_warmup, target_warmup)
                 graphs_eval = self._create_graphs(nodes_eval, target_eval)
-                
+
                 return ((graphs_warmup, target_warmup), (graphs_eval, target_eval))
             
         else:
@@ -269,7 +268,7 @@ class DataLoader():
 
         neighbor_fn = neighbor_list(self.displacement_fn, 
                                     capacity_multiplier=1.+self.n_times_allocated/2.,
-                                    box_size=self.cfg.box_size, 
+                                    box_size=1. if self.cfg.periodic else self.cfg.box_size, 
                                     r_cutoff=self.cfg.r_cutoff,  # must be > 1/3 to avoid cell list, or disable_cell_list, I believe this is a performance issue. 
                                     dr_threshold=0.,  # when the neighbor list updates
                                     format=NeighborListFormat.Sparse)
@@ -280,23 +279,35 @@ class DataLoader():
 
         def compute_edges(positions, receivers, senders):
             displacement = positions[receivers] - positions[senders]
-            distance = jnp.linalg.norm(displacement, axis=-1, keepdims=True)
-            return jnp.concatenate([displacement, distance], axis=-1)
-
+            position_edges = jnp.linalg.norm(displacement, axis=-1, keepdims=True)
+            position_edges = jnp.concatenate([displacement, position_edges], axis=-1)
+            return position_edges
+        
         def get_edge_info(position):
             nbr = self.nbrs.update(position)
             receivers = nbr.idx[self.receivers_idx]
             senders = nbr.idx[self.senders_idx]
             edges = compute_edges(position, receivers, senders)
             return edges, senders, receivers
+
+        def add_sigma(edges, senders, receivers, species, sigma):
+            senders_tmp = species[senders] - 1  # to account for zero indexing
+            receivers_tmp = species[receivers] - 1
+            sigma = sigma[senders_tmp, receivers_tmp][..., None]
+            return  jnp.concatenate([edges, sigma], axis=-1), senders, receivers
         
         _get_edge_info = vmap(get_edge_info, in_axes=(0,), out_axes=(0, 0, 0))
+        _add_sigma = vmap(add_sigma, in_axes=(0, 0, 0, None, None), out_axes=(0, 0, 0))
 
         @jit
         def create_graphs(nodes, positions):
             nodes = nodes.reshape(-1, *nodes.shape[2:])
             positions = positions.reshape(-1, *positions.shape[2:])
             edge_info = _get_edge_info(positions)
+            if hasattr(self.cfg, 'sigma'):
+                species = jnp.array(self.cfg.species).astype(int)
+                sigma = jnp.array(self.cfg.sigma)
+                edge_info = _add_sigma(*edge_info, species, sigma)
             graphs = batch_graphs(nodes, *edge_info)
             return graphs
 
@@ -357,7 +368,7 @@ def load_andor_transform_data(cfg, raw_data=None):
     # Transform the data
     
     if cfg.periodic:
-        box_size = cfg.box_size
+        box_size = data_vars['box_size']
         print('box_size is ', box_size)
         positions = transform(raw_data['R'], 0., box_size, new_min=0., new_max=1., mean=box_size/2.)
     else:
@@ -378,19 +389,18 @@ def load_andor_transform_data(cfg, raw_data=None):
         z = jax.nn.one_hot((node_id-1), int(max(node_id)), dtype=jnp.float32)
         z = z[None, :].repeat(n_data, axis=0)
         print(f'A-Lims: {int(cfg.z_min)} {int(cfg.z_max)}')
-        # z = append_lagged_variables(z, lag=1)  # still needed so points are consistent with other variables
         features += [z]
         initial_info['z'] = z
     
     if 'F' in cfg.node_features:
-        F = transform(raw_data['F'], -1, 1, mean=cfg.F_mean) 
+        F = transform(raw_data['F'], min(cfg.F_min), max(cfg.F_max), -1, 1, mean=cfg.F_mean) 
         print('F-lims: ' + ' | '.join([f'{cfg.F_min[i]:.3f}, {float(cfg.F_max[i]):.3f}' for i in range(cfg.n_dim)]))
         F = append_lagged_variables(F, lag=cfg.lag)
         features += [F]
         initial_info['F'] = F[cfg.n_timesteps]
 
     if 'V' in cfg.node_features:
-        V = transform(raw_data['V'], -1, 1, mean=cfg.V_mean)
+        V = transform(raw_data['V'], min(cfg.V_min), max(cfg.V_max), -1, 1, mean=cfg.V_mean)
         print('V-lims: ' + ' | '.join([f'{cfg.V_min[i]:.3f}, {float(cfg.V_max[i]):.3f}' for i in range(cfg.n_dim)]))
         V = append_lagged_variables(V, lag=cfg.lag)
         features += [V]
@@ -401,13 +411,16 @@ def load_andor_transform_data(cfg, raw_data=None):
 
     setattr(cfg, 'n_features', nodes.shape[-1] * n_nodes)
     setattr(cfg, 'n_target_features', cfg.n_dim * n_nodes)
-    graph_latent_size = nodes.shape[-1]//2
+    graph_latent_size = nodes.shape[-1]
     setattr(cfg, 'graph_latent_size', graph_latent_size)
     graph_mlp_features = list((graph_latent_size for _ in range(cfg.n_enc_layers)))
     setattr(cfg, 'graph_mlp_features', graph_mlp_features)
 
     if cfg.n_unroll_eval:
         setattr(cfg, 'initial_info', initial_info)
+
+
+    # build an n x n matrix of sigmas depending on the connections 
 
     return nodes, targets
     

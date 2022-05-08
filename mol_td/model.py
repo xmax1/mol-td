@@ -24,16 +24,21 @@ def mean_r(x, y, axis=0):
     return jnp.mean(jnp.sum((x-y)**2, axis=-1)**0.5, axis=axis)
 
 
+
 def compute_da(data, y):
-    data0, data1 = data[:-1], data[1:]
+    data0, data1 = data[:, :-1], data[:, 1:]
     datar = data1 - data0
-    datal = jnp.linalg.norm(datar, axis=-1, keepdims=True)
-    datar = datar / datal
-    y0, y1 = y[:-1], y[1:]
+    y0, y1 = y[:, :-1], y[:, 1:]
     yr = y1 - y0
-    yl = jnp.linalg.norm(yr, axis=-1, keepdims=True)
-    yr = yr / yl
-    return jnp.mean(jnp.sum(yr*datar, axis=-1)), jnp.mean(datal / yl)
+    euclidean_distance = jnp.linalg.norm(datar - yr, axis=-1)
+    euclidean_distance = jnp.where(jnp.isnan(euclidean_distance), 0, euclidean_distance)
+
+    v0r = jnp.linalg.norm(datar, axis=-1)
+    v1r = jnp.linalg.norm(yr, axis=-1)
+    costheta = jnp.sum(datar * yr, axis=-1) / (v0r * v1r)
+    isnan = jnp.logical_or(jnp.isnan(costheta), jnp.isinf(costheta))
+    costheta = jnp.where(isnan, 0., costheta)
+    return jnp.mean(costheta), jnp.mean(euclidean_distance), isnan.any(), ((datar - yr)**2).sum(-1).mean()
 
 
 def compute_dts(embedding):
@@ -77,6 +82,7 @@ class HierarchicalTDVAE(nn.Module):
 
     def __call__(self, 
                  data: Tuple, 
+                 kl_on: jnp.ndarray = 0.,
                  latent_states: list = None, 
                  training: bool = False, 
                  sketch: bool = False, 
@@ -169,15 +175,26 @@ class HierarchicalTDVAE(nn.Module):
 
         kl_div =  jnp.sum(jnp.array([posterior['dist'].kl_divergence(prior['dist']).mean(0).sum() 
                             for prior, posterior in zip(priors, posteriors)]))  # mean over the batch dimension
-        
-        loss = nll + kl_div 
 
         y_mean_r_over_time = mean_r(data_target, y, axis=(0, 2))
         y_mean_r = jnp.mean(y_mean_r_over_time, axis=0)
 
-        directional_accuracy, step_size_accuracy = compute_da(data_target, y)
+        directional_accuracy, directional_euclid_dist, isnan, directional_mse = compute_da(data_target, y)
         y_std = jnp.mean(jnp.std(y, axis=0))
 
+        loss = nll + kl_div #- 0.001 * directional_accuracy
+        
+        loss -= directional_accuracy
+        # loss += kl_on * kl_div
+
+        y_sep = jnp.linalg.norm(y.reshape(-1, y.shape[-1] * y.shape[-2], 1) - y.reshape(-1, 1, y.shape[-1] * y.shape[-2]), axis=-1)
+        y_sep = jnp.where(y_sep < 2., y_sep, 0.)
+        y_sep = (kl_on -1.) * 100. * y_sep.mean(0).sum()
+
+        loss += y_sep
+
+        # loss += directional_mse                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+        #loss -= ((isnan.astype(jnp.float32)*-1.)+1.) * directional_accuracy
 
         if not training:
             mean_dts, std_dts = compute_dts(encoder_embedding)
@@ -199,7 +216,8 @@ class HierarchicalTDVAE(nn.Module):
                       y_std=y_std,
                       latent_states=next_latent_states,
                       directional_accuracy=directional_accuracy,
-                      step_size_accuracy=step_size_accuracy,
+                      directional_euclid_dist=directional_euclid_dist,
+                      directional_mse=directional_mse,
                       mean_dts=mean_dts,
                       std_dts=std_dts,
                       latent_covs=latent_covs)
@@ -316,7 +334,7 @@ class SimpleVAE(nn.Module):
 
         z = posterior.sample(seed=self.make_rng('sample'))
 
-        y = self.decoder(z, eval=eval)   
+        y = self.decoder(z, eval=eval)  
 
         output_dist = tfd.Independent(tfd.Normal(y, jnp.ones(y.shape)*self.cfg.prediction_std))  # 1 is the std, when is 1 goes to mse
         # describe_distributions([latent_dist, output_dist, prior])

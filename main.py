@@ -40,10 +40,11 @@ def train(cfg,
     opt_state = tx.init(params)
 
     @jit
-    def train_step(params, batch, opt_state, rng):
+    def train_step(params, batch, opt_state, rng, kl_on):
         rng, sample_rng, dropout_rng = rnd.split(rng, 3)
         model_fwd = partial(model.apply, 
                             training=True, 
+                            kl_on=kl_on,
                             rngs=dict(sample=sample_rng, dropout=dropout_rng))
         loss_grad_fn = jax.value_and_grad(model_fwd, has_aux=True)
         (loss, signal), grads = loss_grad_fn(params, batch)
@@ -79,9 +80,10 @@ def train(cfg,
     best_error = 9999999.
     best_params = params
     for epoch in range(cfg.n_epochs):
+        kl_on = jnp.array(epoch > -1, dtype=jnp.float32)
         
         for batch_idx, batch in enumerate(tqdm(train_loader)):
-            loss, tr_signal, params, opt_state, rng = train_step(params, batch, opt_state, rng)    
+            loss, tr_signal, params, opt_state, rng = train_step(params, batch, opt_state, rng, kl_on)    
             wandb.log(filter_scalars(tr_signal, tag='tr_'))
         train_loader.shuffle()
 
@@ -119,12 +121,8 @@ def train(cfg,
                 for i, dtwm in enumerate(dtwms):
                     wandb.log({f"latent_{i}_dt_wmean_cov" : dtwm})
 
-
             if media_loggers[cfg.experiment] is not None:
                 media_loggers[cfg.experiment](media_logs, cfg, n_batch=1)
-
-            # if cfg.compute_energy is not None:
-            #     energies = cfg.compute_energy(configurations)
 
             val_error = signal['val_y_mean_r']
         else:
@@ -145,7 +143,7 @@ def train(cfg,
             signals = accumulate_signals(signals, test_signal)
         signal = filter_scalars(signals, n_batch=len(val_loader), tag='test_')
 
-        positions = jnp.concatenate(signals['y'], axis=0).reshape(-1, cfg.n_nodes, 3)
+        positions = jnp.concatenate(signals['y'], axis=0).reshape(-1, cfg.n_nodes, cfg.n_dim)
 
         for k, v in signal.items():
             wandb.summary[k] = v 
@@ -162,9 +160,15 @@ def train(cfg,
                     difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
                     wandb.log({f'rbf_{k}_l1norm': difference})
 
+        media_logs = {'test_y_eval': test_signal['y'],
+                      'test_batch': test_signal['data_target']
+        }
+
+        if media_loggers[cfg.experiment] is not None:
+            media_loggers[cfg.experiment](media_logs, cfg, n_batch=1)
+
         dts = jnp.stack(signals['mean_dts']).mean(0)
         idxs = jnp.argsort(dts)
-        # print(signals['latent_covs'])
         latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
         latent_covs = [lc[idxs] for lc in latent_covs]
 
@@ -177,8 +181,9 @@ def train(cfg,
             plt.imshow(lc, interpolation = 'nearest', cmap="summer")
             plt.xlabel('embedding')
             plt.ylabel('latent')
-            # fig = wandb.plot.HeatMap(onp.arange(1, lc.shape[0]+1), onp.arange(1, lc.shape[1]+1), lc, show_text=False)
             wandb.log({f'latent_covs_{i}': fig })
+
+        
 
     return best_params
             
@@ -274,23 +279,23 @@ if __name__ == '__main__':
     parser.add_argument('-net', '--n_eval_timesteps', default=8, type=int)
     parser.add_argument('-new', '--n_eval_warmup', default=None, type=int)
 
-    parser.add_argument('-nenc', '--n_enc_layers', default=1, type=int)
-    parser.add_argument('-ndec', '--n_dec_layers', default=1, type=int)
-    parser.add_argument('-tl', '--n_transfer_layers', default=1, type=int)
-    parser.add_argument('-ne', '--n_embed', default=40, type=int)
+    parser.add_argument('-nenc', '--n_enc_layers', default=2, type=int)
+    parser.add_argument('-ndec', '--n_dec_layers', default=2, type=int)
+    parser.add_argument('-tl', '--n_transfer_layers', default=2, type=int)
+    parser.add_argument('-ne', '--n_embed', default=20, type=int)
     parser.add_argument('-rcut', '--r_cutoff', default=0.5, type=float)
-    parser.add_argument('-nl', '--n_latent', default=1, type=int)
+    parser.add_argument('-nl', '--n_latent', default=2, type=int)
     parser.add_argument('-drop', '--dropout', default=0.5, type=float)
-    parser.add_argument('-ystd', '--y_std', default=0.01, type=float)
+    parser.add_argument('-ystd', '--y_std', default=0.05, type=float)
     parser.add_argument('-b', '--beta', default=1., type=float)
     parser.add_argument('-lp', '--likelihood_prior', default=False, type=input_bool)
-    parser.add_argument('-cw', '--clockwork', default=False, type=input_bool)
-    parser.add_argument('-mj', '--mean_trajectory', default=False, type=input_bool)
-    parser.add_argument('-nue', '--n_unroll_eval', default=100, type=int)
-    parser.add_argument('-lag', '--lag', default=1, type=int)
+    parser.add_argument('-cw', '--clockwork', default=True, type=input_bool)
+    parser.add_argument('-mj', '--mean_trajectory', default=True, type=input_bool)
+    parser.add_argument('-nue', '--n_unroll_eval', default=2000, type=int)
+    parser.add_argument('-lag', '--lag', default=3, type=int)
 
-    parser.add_argument('-e', '--n_epochs', default=100, type=int)
-    parser.add_argument('-bs', '--batch_size', default=64, type=int)
+    parser.add_argument('-e', '--n_epochs', default=50, type=int)
+    parser.add_argument('-bs', '--batch_size', default=128, type=int)
     parser.add_argument('-s', '--split', default=(0.7, 0.15, 0.15), type=input_tuple)
     parser.add_argument('-lr', '--lr', default=0.001, type=float)
 
@@ -316,7 +321,7 @@ if __name__ == '__main__':
 
     data, targets = load_andor_transform_data(cfg)
     
-    train_loader, val_loader, test_loader = create_dataloaders(cfg, data, targets, split=cfg.split, shuffle=not bool(cfg.n_unroll_eval))  # False if 0
+    train_loader, val_loader, test_loader = create_dataloaders(cfg, data, targets, split=cfg.split, shuffle=True)  # False if 0
 
     cfg.initialise_model_hype()
 
@@ -330,7 +335,7 @@ if __name__ == '__main__':
     else:
         experiment_group = today if cfg.tag is None else '/'.join(cfg.tag)
         run_dir = os.path.join('./log', cfg.experiment, experiment_group)
-        if cfg.id is not None: run_dir += f'/{cfg.id}'
+        # if cfg.id is not None: run_dir += f'/{cfg.id}'
         makedir(run_dir)
         cfg.run_path = os.path.join(run_dir, f'run{len(os.listdir(run_dir))}')
         print('run path: ', cfg.run_path)

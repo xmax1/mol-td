@@ -7,7 +7,7 @@ import jax
 from datetime import datetime
 from math import ceil
 import os
-from .utils import md17_log_wandb_videos_or_images
+from .utils import create_animation_2d, md17_log_wandb_videos_or_images
 from .evaluation import evaluate_position_nve, evaluate_position_md17
 
 evaluate_positions = {'md17': evaluate_position_md17,
@@ -15,7 +15,7 @@ evaluate_positions = {'md17': evaluate_position_md17,
 }
 
 media_loggers = {'md17': md17_log_wandb_videos_or_images,
-                 'nve': None
+                 'nve': create_animation_2d
 }
 
 # def compile_data(p, f, a,  flatten=False):
@@ -131,6 +131,8 @@ class Config:
     uracil_xyz:     str = './data/uracil.xyz'
 
     def __post_init__(self):
+        
+        self.n_dec_layers = self.n_enc_layers
 
         print(f'Model: {self.model} \
                 \n n_enc_layers: {self.n_enc_layers} \
@@ -141,9 +143,6 @@ class Config:
 
         if self.load_model is not None:
             self.load_model = os.path.join(self.experiment, self.load_model)
-
-        if self.id is None:
-            self.id = datetime.now().strftime('%m%d_%H%M%S')
 
         if self.wb:
             self.wandb_status = 'online'
