@@ -170,10 +170,34 @@ def md17_log_wandb_videos_or_images(data, cfg, n_batch=10, fps=2):
             media = [wandb.Image(m) for m in media]
         
         elif n_dim == 4:
-            media = get_video(arr, cfg.nodes, sizes, cfg.R_lims)
-            media = wandb.Video(np.transpose(media, (0, 3, 1, 2)), fps=fps)
+            frames = get_video(arr, cfg.nodes, sizes, cfg.R_lims)
+            media = wandb.Video(np.transpose(frames, (0, 3, 1, 2)), fps=fps)
         else:
             print(f'Media {k} is shape {arr.shape}')
+
+        if 'eval_generation' in k:
+            
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.set_aspect('equal')
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+            im = ax.imshow(frames[0], interpolation='nearest')
+            fig.set_size_inches([5,5])
+            fig.tight_layout()
+
+            def update_img(frame):
+                im.set_data(frame)
+                return im
+
+            ani = animation.FuncAnimation(fig, update_img, frames=frames[1:], interval=30)
+            writer = animation.PillowWriter(fps=10)
+            # writer = animation.writers['ffmpeg'](fps=10)
+            path = cfg.run_path + '/' + k +'.gif'
+            print(f'Saving gif to {path}')
+            ani.save(path, writer=writer, dpi=200)
+            plt.close()  
+
         logs[k] = media
 
     wandb.log(logs)
@@ -228,14 +252,14 @@ def snapshot_2d(cfg, im):
 
 
 
-def create_animation_2d(data, cfg, n_batch=1, name='test.mp4', fps=4, dpi=400, use_wandb=True):
+def create_animation_2d(data, cfg, n_batch=1, fps=4, dpi=400, use_wandb=True):
     '''
     arr: (nt, n_nodes, n_dim)
 
     '''
-
     logs = {}
     for name, arr in data.items():
+        print(f'logging {name}')
         arr = arr[:n_batch]  # if 1 then keeps the first dim
         if not len(arr.shape) == 3:
             arr = jnp.squeeze(arr)
@@ -246,27 +270,28 @@ def create_animation_2d(data, cfg, n_batch=1, name='test.mp4', fps=4, dpi=400, u
             im = snapshot_2d(cfg, im)
             frames.append(im)
         
-        
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111)
-        # ax.set_aspect('equal')
-        # ax.get_xaxis().set_visible(False)
-        # ax.get_yaxis().set_visible(False)
-
-        # im = ax.imshow(frames[0], interpolation='nearest')
-        # fig.set_size_inches([5,5])
-        # fig.tight_layout()
-
         def update_img(frame):
             im.set_data(frame)
             return im
 
-        # ani = animation.FuncAnimation(fig, update_img, frames=frames[1:], interval=30)
-        # print(ani)
-        # writer = animation.PillowWriter(fps=30)
-        # writer = animation.writers['ffmpeg'](fps=30)
+        if 'eval_generation' in name:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.set_aspect('equal')
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+            im = ax.imshow(frames[0], interpolation='nearest')
+            fig.set_size_inches([5,5])
+            fig.tight_layout()
 
-        # ani.save(cfg.run_path + '/' + name+'.gif', writer=writer, dpi=dpi)
+            ani = animation.FuncAnimation(fig, update_img, frames=frames[1:], interval=30)
+            writer = animation.PillowWriter(fps=10)
+            # writer = animation.writers['ffmpeg'](fps=10)
+            path = cfg.run_path + '/' + name +'.gif'
+            print(f'Saving gif to {path}')
+            ani.save(path, writer=writer, dpi=dpi)
+            plt.close()  
+
         frames = np.array(frames)
 
         if use_wandb:

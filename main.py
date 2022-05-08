@@ -250,9 +250,12 @@ def evaluate(cfg,
                 wandb.log({f'eval_rbf_{k}_l1norm': difference})
     
     if media_loggers[cfg.experiment] is not None:
+        print('logging eval video')
         media_loggers[cfg.experiment]({'eval_generation': video}, cfg, n_batch=1, fps=4)
 
     data['z'] = cfg.nodes
+
+    data['R'] = data['R'][::10]
     return data
 
 
@@ -362,10 +365,6 @@ if __name__ == '__main__':
             print(states['R'].shape)
             [print(v.shape) for k, v in cfg.initial_info.items()]
             onp.savez(cfg.run_path + '/eval_positions.npz', **states)
-
-            x = onp.load(cfg.run_path + '/eval_positions.npz')
-            print(list(x.keys()))
-            [print(v.shape) for k, v in x.items()]
 
             
             
