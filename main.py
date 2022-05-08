@@ -2,7 +2,7 @@
 from mol_td.signal_utils import compute_rdfs, compute_rdfs_all_unique_bonds
 from mol_td.utils import input_tuple, input_bool, accumulate_signals, filter_scalars, save_cfg
 from mol_td.utils_nojax import *
-from mol_td.utils import load_cfg, load_pk, save_params, makedir
+from mol_td.utils import load_cfg, load_pk, save_params, makedir, save_pk
 from mol_td.data_fns import create_dataloaders, load_andor_transform_data
 from mol_td import models
 from mol_td.config import Config, evaluate_positions, media_loggers
@@ -183,9 +183,7 @@ def train(cfg,
             plt.ylabel('latent')
             wandb.log({f'latent_covs_{i}': fig })
 
-        
-
-    return best_params
+    return best_params, val_rbfs
             
     
 
@@ -204,7 +202,8 @@ def evaluate(cfg,
              model, 
              params, 
              rng, 
-             rbfs=None):
+             rbfs=None,
+             val_rbfs=None):
 
     rng, sample_rng, dropout_rng = rnd.split(rng, 3)
 
@@ -228,26 +227,43 @@ def evaluate(cfg,
     initial_info = cfg.initial_info
     
     data = {}
+    signals = {}
     for i in range(n_unroll):
         val_loss_batch, val_signal, rng = unroll_step(params, warm_up_batch, val_signal['latent_states'], rng)
         step_data, initial_info = evaluate_positions[cfg.experiment](cfg, val_signal['y'], initial_info)
         data = robust_dictionary_append(data, step_data)
+        signals = accumulate_signals(signals, val_signal)
+    # signal = filter_scalars(signals, n_batch=len(val_loader), tag='val_')
 
     data = {k:jnp.concatenate(v, axis=1) for k, v in data.items()}
     video = data['R'][:, :100, ...]
     data['R'] = data['R'].reshape(-1, *data['R'].shape[2:])
 
     if cfg.compute_rdfs:
-        val_rbfs = compute_rdfs(cfg.nodes, data['R'], mode='all_unique_bonds')
-        for k, v in val_rbfs.items():
+        eval_rbfs = compute_rdfs(cfg.nodes, data['R'], mode='all_unique_bonds')
+        for k, v in eval_rbfs.items():
             table = wandb.Table(data=v, columns = ["x", "y"])
             name = f'eval_rbf_{k}'
             wandb.log({name : wandb.plot.line(table, "x", "y", title=name)})
 
         if rbfs is not None:
-            for k, v in val_rbfs.items():
+            for k, v in eval_rbfs.items():
                 difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
                 wandb.log({f'eval_rbf_{k}_l1norm': difference})
+
+    dts = jnp.stack(signals['mean_dts']).mean(0)
+    idxs = jnp.argsort(dts)
+    latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
+    latent_covs = [lc[idxs] for lc in latent_covs]
+
+    signals_data = {'latent_covs': latent_covs,
+                    'dts': dts,
+                    'eval_rbfs': eval_rbfs,
+                    'val_rbfs': val_rbfs,
+                    'tr_rbfs': rbfs 
+    }
+
+    save_pk(signals_data, os.path.join(cfg.run_path, 'signals.pk'))
     
     if media_loggers[cfg.experiment] is not None:
         print('logging eval video')
@@ -356,12 +372,12 @@ if __name__ == '__main__':
             rbfs = None
 
         if train_loader is not None:
-            params = train(cfg, model, params, rng, train_loader, val_loader=val_loader, test_loader=test_loader, rbfs=rbfs)
+            params, val_rbfs = train(cfg, model, params, rng, train_loader, val_loader=val_loader, test_loader=test_loader, rbfs=rbfs)
         
         if cfg.n_unroll_eval:
             train_loader.shuffle()
             warm_up_batch = next(train_loader)  # trainloader is simpler because it doesn't have the eval warmup
-            states = evaluate(cfg, warm_up_batch, cfg.n_unroll_eval, model, params, rng, rbfs=rbfs)
+            states = evaluate(cfg, warm_up_batch, cfg.n_unroll_eval, model, params, rng, rbfs, val_rbfs)
             print(states['R'].shape)
             [print(v.shape) for k, v in cfg.initial_info.items()]
             onp.savez(cfg.run_path + '/eval_positions.npz', **states)
