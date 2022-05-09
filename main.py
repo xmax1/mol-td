@@ -121,6 +121,7 @@ def train(cfg,
                 for i, dtwm in enumerate(dtwms):
                     wandb.log({f"latent_{i}_dt_wmean_cov" : dtwm})
 
+
             if media_loggers[cfg.experiment] is not None:
                 media_loggers[cfg.experiment](media_logs, cfg, n_batch=1)
 
@@ -160,6 +161,8 @@ def train(cfg,
                     difference = float(jnp.mean(jnp.abs(rbfs[k][:, 1] - v[:, 1])))
                     wandb.log({f'rbf_{k}_l1norm': difference})
 
+        
+
         media_logs = {'test_y_eval': test_signal['y'],
                       'test_batch': test_signal['data_target']
         }
@@ -171,6 +174,13 @@ def train(cfg,
         idxs = jnp.argsort(dts)
         latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
         latent_covs = [lc[idxs] for lc in latent_covs]
+
+        signals_data = {'latent_covs': latent_covs,
+                    'dts': dts[idxs],
+                    'val_rbfs': val_rbfs,
+                    'tr_rbfs': rbfs 
+            }
+        save_pk(signals_data, os.path.join(cfg.run_path, 'signals.pk'))
 
         data = [[x, y] for (x, y) in zip(range(dts.shape[-1]), dts[idxs]) ]
         table = wandb.Table(data=data, columns = ["x", "y"])
@@ -255,15 +265,6 @@ def evaluate(cfg,
     idxs = jnp.argsort(dts)
     latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
     latent_covs = [lc[idxs] for lc in latent_covs]
-
-    signals_data = {'latent_covs': latent_covs,
-                    'dts': dts[idxs],
-                    'eval_rbfs': eval_rbfs,
-                    'val_rbfs': val_rbfs,
-                    'tr_rbfs': rbfs 
-    }
-
-    save_pk(signals_data, os.path.join(cfg.run_path, 'signals.pk'))
     
     if media_loggers[cfg.experiment] is not None:
         print('logging eval video')
