@@ -116,7 +116,8 @@ def train(cfg,
                 dts = jnp.stack(signals['mean_dts'], axis=0).mean(0)
                 idxs = jnp.argsort(dts)
                 latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
-                dtwms = [jnp.dot(dts[idxs], jnp.abs(lc[idxs] / lc.sum()).mean(-1)) for lc in latent_covs]
+                latent_covs = jnp.absolute(lc[idxs]).sum(-1)
+                dtwms = [jnp.dot(dts[idxs], lc / jnp.max(lc)) for lc in latent_covs]
 
                 for i, dtwm in enumerate(dtwms):
                     wandb.log({f"latent_{i}_dt_wmean_cov" : dtwm})
@@ -306,7 +307,7 @@ if __name__ == '__main__':
     parser.add_argument('-nel', '--n_embed_latent', default=20, type=int)
     parser.add_argument('-rcut', '--r_cutoff', default=0.5, type=float)
     parser.add_argument('-nl', '--n_latent', default=2, type=int)
-    parser.add_argument('-drop', '--dropout', default=0.5, type=float)
+    parser.add_argument('-drop', '--dropout', default=0.25, type=float)
     parser.add_argument('-ystd', '--y_std', default=0.05, type=float)
     parser.add_argument('-b', '--beta', default=1., type=float)
     parser.add_argument('-lp', '--likelihood_prior', default=False, type=input_bool)

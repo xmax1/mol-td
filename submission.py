@@ -54,7 +54,7 @@ hyperparameters1 = {
     '-e': [30, ],  # epochs
 
     '-d': ['md17/uracil_dft', 'md17/ethanol_dft', 'md17/malonaldehyde_dft', 'md17/naphthalene_dft',
-            'md17/aspirin_dft', 'md17/salicylic_dft', 'md17/toluene_dft', 'md17/benzene2017_dft'],
+            'md17/aspirin_dft', 'md17/salicylic_dft', 'md17/toluene_dft'],
     
     '-tag': ['smaller_latent1', ],
 }

@@ -100,7 +100,7 @@ class HierarchicalTDVAE(nn.Module):
 
         embeddings = []
         for ladder, dropout in zip(self.ladder, self.dropout):
-            embedding = activations[self.cfg.latent_activation](ladder(embedding)) # + embedding
+            embedding = activations[self.cfg.latent_activation](ladder(embedding)) + embedding
             # if training: embedding = dropout(embedding, deterministic=not training)
             # including this really meaningfully affects the validation error, questions to be answered! 
             embeddings.insert(0, embedding)
