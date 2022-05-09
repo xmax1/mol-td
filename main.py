@@ -82,10 +82,22 @@ def train(cfg,
     for epoch in range(cfg.n_epochs):
         kl_on = jnp.array(epoch > -1, dtype=jnp.float32)
         
+        signals  = {}
         for batch_idx, batch in enumerate(tqdm(train_loader)):
-            loss, tr_signal, params, opt_state, rng = train_step(params, batch, opt_state, rng, kl_on)    
+            loss, tr_signal, params, opt_state, rng = train_step(params, batch, opt_state, rng, kl_on) 
+            signals = accumulate_signals(signals, tr_signal)   
             wandb.log(filter_scalars(tr_signal, tag='tr_'))
         train_loader.shuffle()
+
+        if cfg.n_latent > 1:
+            dts = jnp.stack(signals['mean_dts'], axis=0).mean(0)
+            idxs = jnp.argsort(dts)
+            latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
+            latent_covs = [jnp.absolute(lc[idxs]).sum(-1) for lc in latent_covs]
+            dtwms = [jnp.dot(dts[idxs], lc / jnp.max(lc)) for lc in latent_covs]
+
+            for i, dtwm in enumerate(dtwms):
+                wandb.log({f"latent_{i}_dt_wmean_cov" : dtwm})
 
         if val_loader is not None:
 
@@ -111,16 +123,6 @@ def train(cfg,
                           'val_posterior_y': val_posterior_y,
                           'tr_ground_truth': tr_signal['data_target'],
                           'tr_posterior_y': tr_signal['y_r']}
-
-            if cfg.n_latent > 1:
-                dts = jnp.stack(signals['mean_dts'], axis=0).mean(0)
-                idxs = jnp.argsort(dts)
-                latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
-                latent_covs = jnp.absolute(lc[idxs]).sum(-1)
-                dtwms = [jnp.dot(dts[idxs], lc / jnp.max(lc)) for lc in latent_covs]
-
-                for i, dtwm in enumerate(dtwms):
-                    wandb.log({f"latent_{i}_dt_wmean_cov" : dtwm})
 
 
             if media_loggers[cfg.experiment] is not None:
