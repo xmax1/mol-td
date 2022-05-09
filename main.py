@@ -116,7 +116,7 @@ def train(cfg,
                 dts = jnp.stack(signals['mean_dts'], axis=0).mean(0)
                 idxs = jnp.argsort(dts)
                 latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
-                dtwms = [jnp.dot(dts[idxs], jnp.abs(lc[idxs]).mean(-1)) for lc in latent_covs]
+                dtwms = [jnp.dot(dts[idxs], jnp.abs(lc[idxs] / lc.sum()).mean(-1)) for lc in latent_covs]
 
                 for i, dtwm in enumerate(dtwms):
                     wandb.log({f"latent_{i}_dt_wmean_cov" : dtwm})
