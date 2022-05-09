@@ -179,7 +179,7 @@ def train(cfg,
                     'dts': dts[idxs],
                     'val_rbfs': val_rbfs,
                     'tr_rbfs': rbfs 
-            }
+        }
         save_pk(signals_data, os.path.join(cfg.run_path, 'signals.pk'))
 
         data = [[x, y] for (x, y) in zip(range(dts.shape[-1]), dts[idxs]) ]
@@ -301,8 +301,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-nenc', '--n_enc_layers', default=2, type=int)
     parser.add_argument('-ndec', '--n_dec_layers', default=2, type=int)
-    parser.add_argument('-tl', '--n_transfer_layers', default=2, type=int)
-    parser.add_argument('-ne', '--n_embed', default=20, type=int)
+    parser.add_argument('-tl', '--n_transfer_layers', default=1, type=int)
+    parser.add_argument('-ne', '--n_embed', default=30, type=int)
+    parser.add_argument('-nel', '--n_embed_latent', default=15, type=int)
     parser.add_argument('-rcut', '--r_cutoff', default=0.5, type=float)
     parser.add_argument('-nl', '--n_latent', default=2, type=int)
     parser.add_argument('-drop', '--dropout', default=0.5, type=float)
@@ -311,8 +312,8 @@ if __name__ == '__main__':
     parser.add_argument('-lp', '--likelihood_prior', default=False, type=input_bool)
     parser.add_argument('-cw', '--clockwork', default=True, type=input_bool)
     parser.add_argument('-mj', '--mean_trajectory', default=True, type=input_bool)
-    parser.add_argument('-nue', '--n_unroll_eval', default=2000, type=int)
-    parser.add_argument('-lag', '--lag', default=3, type=int)
+    parser.add_argument('-nue', '--n_unroll_eval', default=100, type=int)
+    parser.add_argument('-lag', '--lag', default=1, type=int)
 
     parser.add_argument('-e', '--n_epochs', default=50, type=int)
     parser.add_argument('-bs', '--batch_size', default=128, type=int)

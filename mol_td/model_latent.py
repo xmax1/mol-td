@@ -15,11 +15,11 @@ class GRUCell(nn.Module):
     def __call__(self, h0, z_t0):
 
         # for _ in range(self.cfg.n_transfer_layers):
-        z_t0 = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(z_t0))
+        z_t0 = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed_latent)(z_t0))
 
         h1, cell_out = nn.GRUCell()(h0, z_t0)  # (carry, outputs) = f(carry, inputs) # https://flax.readthedocs.io/en/latest/_autosummary/flax.linen.GRUCell.html
 
-        cell_out = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(cell_out))
+        cell_out = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed_latent)(cell_out))
 
         mean = nn.Dense(self.cfg.n_embed)(cell_out)
         std = nn.softplus(nn.Dense(self.cfg.n_embed)(cell_out + 0.54)) + self.cfg.latent_dist_min_std
@@ -68,10 +68,10 @@ class Distribution(nn.Module):
     def __call__(self, s):
 
         for _ in range(self.cfg.n_transfer_layers):
-            s = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed)(s))
+            s = activations[self.cfg.latent_activation](nn.Dense(self.cfg.n_embed_latent)(s))
 
-        mean = nn.Dense(self.cfg.n_embed)(s)
-        std = jnn.softplus(nn.Dense(self.cfg.n_embed)(s + 0.54)) + self.cfg.latent_dist_min_std
+        mean = nn.Dense(self.cfg.n_embed_latent)(s)
+        std = jnn.softplus(nn.Dense(self.cfg.n_embed_latent)(s + 0.54)) + self.cfg.latent_dist_min_std
         dist = tfd.Normal(mean, std)
         z_t1 = dist.sample(seed=self.make_rng('sample'))
 
@@ -95,11 +95,11 @@ class MLPTransfer(nn.Module):
 
         # both gru outputs are the same https://blog.floydhub.com/gru-with-pytorch/
         self.cell = cells[self.cfg.transfer_fn]
-        self.dense = nn.Dense(self.cfg.n_embed)
+        self.dense = nn.Dense(self.cfg.n_embed_latent)
 
     def zero_state(self, leading_dims):
-        mean=jnp.zeros(leading_dims+(self.cfg.n_embed,))
-        std=jnp.ones(leading_dims+(self.cfg.n_embed,))
+        mean=jnp.zeros(leading_dims+(self.cfg.n_embed_latent,))
+        std=jnp.ones(leading_dims+(self.cfg.n_embed_latent,))
         dist = tfd.Normal(mean, std)
         cell_out = dist.sample(seed=self.make_rng('sample'))
         z_prior = dist.sample(seed=self.make_rng('sample'))
@@ -108,11 +108,11 @@ class MLPTransfer(nn.Module):
         if self.cfg.transfer_fn == 'MLP':
             state =  dict(z=z_prior, mean=mean, std=std)
         elif self.cfg.transfer_fn == 'LSTM':
-            h = nn.LSTMCell.initialize_carry(rnd.PRNGKey(self.cfg.seed), leading_dims, self.cfg.n_embed)
+            h = nn.LSTMCell.initialize_carry(rnd.PRNGKey(self.cfg.seed), leading_dims, self.cfg.n_embed_latent)
             # default is a matrix of zeros. h is a tuple
             state =  dict(carry=h, z=mean)
         elif self.cfg.transfer_fn == 'GRU':
-            h = nn.GRUCell.initialize_carry(rnd.PRNGKey(self.cfg.seed), leading_dims, self.cfg.n_embed)
+            h = nn.GRUCell.initialize_carry(rnd.PRNGKey(self.cfg.seed), leading_dims, self.cfg.n_embed_latent)
             # default is a matrix of zeros. h is an array
             state =  dict(carry=mean, z=mean)
 

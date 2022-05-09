@@ -406,7 +406,6 @@ def load_andor_transform_data(cfg, raw_data=None):
         features += [V]
         initial_info['V'] = V[cfg.n_timesteps]
 
-    # Set the node features
     nodes = jnp.concatenate(features, axis=-1)
 
     setattr(cfg, 'n_features', nodes.shape[-1] * n_nodes)

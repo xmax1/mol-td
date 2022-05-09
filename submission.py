@@ -26,25 +26,39 @@ import itertools
 # parser.add_argument('-lr', '--lr', default=0.001, type=float)
 
 
+# hyperparameters1 = {
+#     '-t': ['LSTM', ],  # LSTM
+#     '-nenc': [1, ],
+#     '-ne': [40, ],
+#     '-nl': [1, 2, 3],
+#     '-cw': ['True', 'False'],  # clockwork
+#     '-mj': ['True',],  # mean trajectory
+#     '-ystd': [0.05, ],
+#     '-bs': [128, ],
+#     '-lag': [3, ],
+#     '-e': [30, ],  # epochs
+
+#     '-d': ['md17/uracil_dft', 'md17/ethanol_dft', 'md17/malonaldehyde_dft', 'md17/naphthalene_dft',
+#             'md17/aspirin_dft.npz', 'md17/salicylic_dft.npz', 'md17/toluene_dft.npz', 'md17/benzene2017_dft.npz'],
+    
+#     '-tag': ['monday_clockwork', ],
+# }
+
 hyperparameters1 = {
-    '-t': ['LSTM', ],  # LSTM
-    '-nenc': [1, ],
-    '-ne': [40, ],
     '-nl': [1, 2, 3],
     '-cw': ['True', 'False'],  # clockwork
     '-mj': ['True',],  # mean trajectory
-    '-ystd': [0.05, ],
+    '-ystd': [0.01, ],
     '-bs': [128, ],
-    '-lag': [3, ],
     '-e': [30, ],  # epochs
 
     '-d': ['md17/uracil_dft', 'md17/ethanol_dft', 'md17/malonaldehyde_dft', 'md17/naphthalene_dft',
             'md17/aspirin_dft.npz', 'md17/salicylic_dft.npz', 'md17/toluene_dft.npz', 'md17/benzene2017_dft.npz'],
     
-    '-tag': ['monday_clockwork', ],
+    '-tag': ['smaller_latent', ],
 }
 
-addendum = ' --wb -p TimeDynamics_v2 -g monday_clockwork'
+addendum = ' --wb -p TimeDynamics_v2 -g smaller_latent'
 
 lists = [[f' {k} {str(v)}' for v in options] for k, options in hyperparameters1.items()]
 

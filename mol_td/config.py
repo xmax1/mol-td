@@ -18,40 +18,6 @@ media_loggers = {'md17': md17_log_wandb_videos_or_images,
                  'nve': create_animation_2d
 }
 
-# def compile_data(p, f, a,  flatten=False):
-#     n_data, n_atom = p.shape[:2]
-#     target = jnp.concatenate([p, f], axis=-1)
-#     if flatten:
-#         target = target.reshape(n_data, n_atom * 6)
-#         data = jnp.concatenate([target, a], axis=-1)
-#     else:
-#         data = jnp.concatenate([p, f, a[..., None]], axis=-1)
-#     return data, target
-
-
-# def uncompile_data(data, y, n_atoms, unflatten=False):
-#     n_data, nt = data.shape[:2]
-#     if unflatten:
-#         data = data.reshape(n_data, nt, n_atoms, -1)  # [..., :-n_atoms]
-#         y = y.reshape(n_data, nt, n_atoms, -1)
-#     data_r, data_f = data[..., :3], data[..., 3:6]
-#     y_r, y_f = y[..., :3], y[..., 3:6]
-#     return (data_r, data_f), (y_r, y_f)
-
-
-# enc_dec = {'MLP': {'n_features': lambda n_atoms: n_atoms * (3 + 3 + 1),
-#                    'n_target_features': lambda n_atoms: n_atoms * (3 + 3),
-#                    'compile_data': lambda p, f, a: compile_data(p, f, a, flatten=True), 
-#                    'uncompile_data': lambda data, y, n_atoms: uncompile_data(data, y, n_atoms, unflatten=True)
-#                   },
-
-#            'GCN': {'n_features': lambda n_atoms: (3 + 3 + 1),
-#                    'n_target_features': lambda n_atoms: n_atoms * (3 + 3),
-#                    'compile_data': lambda p, f, a: compile_data(p, f, a, flatten=False),
-#                    'uncompile_data': lambda data, y, n_atoms: uncompile_data(data, y, n_atoms, unflatten=False)
-#                    }
-# }
-
 @dataclass
 class Config:
     seed: int = 1
@@ -72,7 +38,8 @@ class Config:
     n_enc_layers:           int   = 2
     n_dec_layers:           int   = 2
     n_transfer_layers:      int   = 1
-    n_embed:                list  = 40
+    n_embed:                int   = 40
+    n_embed_latent:         int   = 20
     n_latent:               int   = 2
     y_std:                  float = 1.
     latent_dist_min_std:    float = 0.0001  # 0.0001 cwvae
@@ -80,7 +47,7 @@ class Config:
     transfer_fn:            str   = 'GRU'
     encoder:                str   = 'GNN'
     decoder:                str   = 'MLP'
-    latent_activation:      str   = 'leaky_relu'
+    latent_activation:      str   = 'relu'
     map_activation:         str   = 'leaky_relu'
     beta:                   float = 1.
     likelihood_prior:       bool  = False
@@ -191,7 +158,7 @@ class Config:
         # else:
         #     n_embed_encoder = max(2, ceil(self.n_features*0.25))
         self.enc_hidden = tuple(jnp.linspace(self.n_features, self.n_embed, num=self.n_enc_layers+1).astype(int)[1:])
-        self.dec_hidden = tuple(jnp.linspace(self.n_embed, self.n_target_features, num=self.n_dec_layers+1).astype(int)[1:])
+        self.dec_hidden = tuple(jnp.linspace(self.n_embed_latent, self.n_target_features, num=self.n_dec_layers+1).astype(int)[1:])
         # print('Encoder:', self.enc_hidden, 'Decoder:', self.dec_hidden)
     
     @property
