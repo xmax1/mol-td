@@ -113,10 +113,10 @@ def train(cfg,
                           'tr_posterior_y': tr_signal['y_r']}
 
             if cfg.n_latent > 1:
-                dts = jnp.stack(signals['mean_dts']).mean(0)
+                dts = jnp.stack(signals['mean_dts'], axis=0).mean(0)
                 idxs = jnp.argsort(dts)
                 latent_covs = jnp.stack(signals['latent_covs'], axis=0).mean(0)
-                dtwms = [jnp.dot(dts, jnp.abs(lc[idxs]).mean(-1)) for lc in latent_covs]
+                dtwms = [jnp.dot(dts[idxs], jnp.abs(lc[idxs]).mean(-1)) for lc in latent_covs]
 
                 for i, dtwm in enumerate(dtwms):
                     wandb.log({f"latent_{i}_dt_wmean_cov" : dtwm})
@@ -257,7 +257,7 @@ def evaluate(cfg,
     latent_covs = [lc[idxs] for lc in latent_covs]
 
     signals_data = {'latent_covs': latent_covs,
-                    'dts': dts,
+                    'dts': dts[idxs],
                     'eval_rbfs': eval_rbfs,
                     'val_rbfs': val_rbfs,
                     'tr_rbfs': rbfs 

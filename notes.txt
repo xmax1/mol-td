@@ -52,3 +52,20 @@ tree_util.tree_multimap(lambda x,y: x+y, t, tree_util.tree_map(lambda x: x*x, t)
 dataclass initialisation pattern https://flax.readthedocs.io/en/latest/notebooks/flax_basics.html (Module)
 
 setup method initialises layers. It is possible to skip this for inline initialisation and execution by creating a nn.compact method. 
+
+
+python compute_energy.py -e 100 -n uracil -d ./data/md17/uracil_dft.npz
+python compute_energy.py -e 100 -n aspirin -d ./data/md17/aspirin_dft.npz
+python compute_energy.py -e 100 -n malonaldehyde -d ./data/md17/malonaldehyde_dft.npz
+python compute_energy.py -e 100 -n salicylic -d ./data/md17/salicylic_dft.npz
+python compute_energy.py -e 100 -n toluene -d ./data/md17/toluene_dft.npz
+python compute_energy.py -e 100 -n ethanol -d ./data/md17/ethanol_dft.npz
+python compute_energy.py -e 100 -n naphthalene -d ./data/md17/naphthalene_dft.npz
+python compute_energy.py -e 100 -n benzene2017 -d ./data/md17/benzene2017_dft.npz
+
+
+# scp -r amawi@sylg.fysik.dtu.dk:/home/energy/amawi/projects/mol-td/data/md17/energies .
+
+
+aspirin_dft.npz        energies.npz           malonaldehyde_dft.npz  salicylic_dft.npz      toluene_dft.npz
+benzene2017_dft.npz    ethanol_dft.npz        naphthalene_dft.npz    test_data.npz          uracil_dft.npz

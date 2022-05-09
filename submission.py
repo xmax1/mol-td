@@ -25,44 +25,26 @@ import itertools
 # parser.add_argument('-bs', '--batch_size', default=128, type=int)
 # parser.add_argument('-lr', '--lr', default=0.001, type=float)
 
+
 hyperparameters1 = {
-    '-t': ['GRU',],  # LSTM
-    '-nenc': [1, 2],
-    '-ne': [10, 20, 40],
+    '-t': ['LSTM', ],  # LSTM
+    '-nenc': [1, ],
+    '-ne': [40, ],
     '-nl': [1, 2, 3],
-    '-cw': ['False',],  # clockwork
+    '-cw': ['True', 'False'],  # clockwork
     '-mj': ['True',],  # mean trajectory
-    '-ystd': [0.01, 0.05, 0.1],
-    '-bs': [128,],
-    '-lag': [1, 3, 5],
-    '-e': [25,],  # epochs
+    '-ystd': [0.05, ],
+    '-bs': [128, ],
+    '-lag': [3, ],
+    '-e': [30, ],  # epochs
 
-    '-d': ['md17/uracil_dft', ],
+    '-d': ['md17/uracil_dft', 'md17/ethanol_dft', 'md17/malonaldehyde_dft', 'md17/naphthalene_dft',
+            'md17/aspirin_dft.npz', 'md17/salicylic_dft.npz', 'md17/toluene_dft.npz', 'md17/benzene2017_dft.npz'],
     
-    '-tag': ['model_optimise_v2', ],
+    '-tag': ['monday_clockwork', ],
 }
 
-hyperparameters2 = {
-    '-t': ['GRU',],  # LSTM
-    '-nenc': [1,],
-    '-ndec': [1,],
-    '-ne': [20,],
-    '-nl': [1,],
-    '-cw': ['True',],  # clockwork
-    '-mj': ['False',],  # mean trajectory
-    '-ystd': [0.01,],
-    '-bs': [64,],
-    '-lag': [1,],
-    '-e': [10,],  # epochs
-
-    '-d': ['md17/uracil_dft', ],
-    
-    '-tag': ['compute_energy_test,uracil', ],
-}
-
-
-
-addendum = ' --wb -p TimeDynamics_v2 -g model_optimise1'
+addendum = ' --wb -p TimeDynamics_v2 -g monday_clockwork'
 
 lists = [[f' {k} {str(v)}' for v in options] for k, options in hyperparameters1.items()]
 

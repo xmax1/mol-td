@@ -59,4 +59,4 @@ if __name__ == '__main__':
 
     energies = compute_energy(args['dataset'], every=args['every'])
 
-    onp.savez(os.path.join(base_folder, args['name'], 'energies.npz'), **energies)
+    onp.savez(os.path.join(base_folder, 'energies', args['name'] + '_energies.npz'), **energies)
