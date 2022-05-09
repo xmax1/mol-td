@@ -99,7 +99,7 @@ class Config:
 
     def __post_init__(self):
         
-        self.n_dec_layers = self.n_enc_layers
+        self.n_dec_layers = 2
 
         print(f'Model: {self.model} \
                 \n n_enc_layers: {self.n_enc_layers} \

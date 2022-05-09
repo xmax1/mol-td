@@ -410,7 +410,7 @@ def load_andor_transform_data(cfg, raw_data=None):
 
     setattr(cfg, 'n_features', nodes.shape[-1] * n_nodes)
     setattr(cfg, 'n_target_features', cfg.n_dim * n_nodes)
-    graph_latent_size = nodes.shape[-1]
+    graph_latent_size = int(nodes.shape[-1] * 0.8)
     setattr(cfg, 'graph_latent_size', graph_latent_size)
     graph_mlp_features = list((graph_latent_size for _ in range(cfg.n_enc_layers)))
     setattr(cfg, 'graph_mlp_features', graph_mlp_features)

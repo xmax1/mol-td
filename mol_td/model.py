@@ -100,7 +100,7 @@ class HierarchicalTDVAE(nn.Module):
 
         embeddings = []
         for ladder, dropout in zip(self.ladder, self.dropout):
-            embedding = activations[self.cfg.latent_activation](ladder(embedding)) + embedding
+            embedding = activations[self.cfg.latent_activation](ladder(embedding)) # + embedding
             # if training: embedding = dropout(embedding, deterministic=not training)
             # including this really meaningfully affects the validation error, questions to be answered! 
             embeddings.insert(0, embedding)
@@ -119,7 +119,7 @@ class HierarchicalTDVAE(nn.Module):
 
             if not jump == 1:
                 embedding = jnp.split(embedding, embedding.shape[1]//jump, axis=1)
-                embedding = jnp.concatenate([jnp.mean(e, axis=1, keepdims=True) for e in embedding], axis=1)
+                embedding = jnp.concatenate([jnp.sum(e, axis=1, keepdims=True) for e in embedding], axis=1)
             
             nt = embedding.shape[1]
             
