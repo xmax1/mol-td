@@ -182,11 +182,8 @@ class HierarchicalTDVAE(nn.Module):
 
         loss = nll + kl_div 
 
-        if not training:
-            mean_dts, std_dts = compute_dts(encoder_embedding)
-            latent_covs = compute_latent_covs(encoder_embedding, priors)
-        else:
-            mean_dts, std_dts, latent_covs = None, None, None
+        mean_dts, std_dts = compute_dts(encoder_embedding)
+        latent_covs = compute_latent_covs(encoder_embedding, priors)
 
         signal = dict(posterior_std=posterior['std'].mean(),
                       loss=loss,

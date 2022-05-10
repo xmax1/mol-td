@@ -53,13 +53,14 @@ hyperparameters1 = {
     '-bs': [128, ],
     '-e': [30, ],  # epochs
 
+
     '-d': ['md17/uracil_dft', 'md17/ethanol_dft', 'md17/malonaldehyde_dft', 'md17/naphthalene_dft',
             'md17/aspirin_dft', 'md17/salicylic_dft', 'md17/toluene_dft'],
     
-    '-tag': ['smaller_latent1', ],
+    '-tag': ['final_final', ],
 }
 
-addendum = ' --wb -p TimeDynamics_v2 -g smaller_latent1'
+addendum = ' --wb -p TimeDynamics_v2 -g final_final'
 
 lists = [[f' {k} {str(v)}' for v in options] for k, options in hyperparameters1.items()]
 
